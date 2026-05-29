@@ -85,11 +85,18 @@
 
 <div id="setup" class="setup">
   <h1>ClickUp Dashboard<br>Generator</h1>
-  <p class="sub">// paste URL → instant dashboard</p>
+  <p class="sub">// free · no AI needed · uses ClickUp API directly</p>
+
+  <div class="field">
+    <label>ClickUp API Token</label>
+    <input type="password" id="ikey" placeholder="pk_123456_XXXXXXXXXX"/>
+    <p class="hint">Get it free: ClickUp → Settings → Apps → API Token. Saved locally in your browser.</p>
+  </div>
 
   <div class="field">
     <label>ClickUp Space URL</label>
     <input type="url" id="iurl" placeholder="https://app.clickup.com/90161601633/v/s/90166936041"/>
+    <p class="hint">Copy URL directly from your ClickUp space.</p>
   </div>
 
   <button class="btn" id="gbtn" onclick="generate()">
@@ -103,100 +110,168 @@
 <div id="dash"></div>
 
 <script>
-// ── Set this to your Cloudflare Worker URL after deploying worker.js ──
-const WORKER_URL = 'https://clickup.siddharth-06d.workers.dev/';
-// ─────────────────────────────────────────────────────────────────────
-
 const PC=['#7c6af7','#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c'];
-const SC={s0:'#4b4b5e',s1:'#7c6af7',s2:'#fbbf24',s3:'#34d399',s4:'#60a5fa',s5:'#34d399'};
+const PRIO_COLORS={urgent:'#f87171',high:'#fbbf24',normal:'#60a5fa',low:'#6b6b80'};
+
 function parseURL(u){const m=u.match(/app\.clickup\.com\/(\d+)\/v\/[sl]\/(\d+)/);return m?{w:m[1],s:m[2]}:null}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function ini(n){return(n||'?').split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)}
 function bw(v,m){return m?Math.max(4,Math.round(v/m*100)):0}
+function ts(){return new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function log(msg,cls=''){
   const w=document.getElementById('prog-wrap'),l=document.getElementById('plog');
   w.style.display='block';const d=document.createElement('div');d.className='ll '+cls;
-  const t=new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  d.textContent=`[${t}] ${msg}`;l.appendChild(d);l.scrollTop=l.scrollHeight;
+  d.textContent=`[${ts()}] ${msg}`;l.appendChild(d);l.scrollTop=l.scrollHeight;
 }
 function setLoading(on){
   const b=document.getElementById('gbtn'),i=document.getElementById('gicon'),t=document.getElementById('gtxt');
-  b.disabled=on;i.innerHTML=on?'<span class="spin"></span>':'⚡';t.textContent=on?'Generating…':'Generate Dashboard';
+  b.disabled=on;i.innerHTML=on?'<span class="spin"></span>':'⚡';t.textContent=on?'Fetching…':'Generate Dashboard';
 }
 function showErr(m){document.getElementById('ebox').innerHTML=`<div class="err">${m}</div>`}
 function scls(s){return{'to do':'s0','in progress':'s1','pending for testing':'s2','uat':'s3','release to uat':'s4','live':'s5'}[(s||'').toLowerCase()]||'s0'}
 function pcls(p){return{urgent:'pu',high:'ph',normal:'pn',low:'pl'}[p]||'pp'}
+function prioLabel(p){const m={1:'urgent',2:'high',3:'normal',4:'low'};return m[p]||null}
 
 window.addEventListener('DOMContentLoaded',()=>{
+  const k=localStorage.getItem('cu_key')||'';
   const u=localStorage.getItem('cu_url')||'';
+  if(k)document.getElementById('ikey').value=k;
   if(u)document.getElementById('iurl').value=u;
 });
+
+async function cuFetch(token, path){
+  const res = await fetch(`https://api.clickup.com/api/v2${path}`,{
+    headers:{'Authorization': token}
+  });
+  if(!res.ok){
+    const e=await res.json().catch(()=>({}));
+    throw new Error(e.err||e.error||`ClickUp API error ${res.status}`);
+  }
+  return res.json();
+}
 
 async function generate(){
   document.getElementById('ebox').innerHTML='';
   document.getElementById('plog').innerHTML='';
-  const rawUrl=document.getElementById('iurl').value.trim();
-  if(!rawUrl)return showErr('Paste a ClickUp space URL.');
-  const ids=parseURL(rawUrl);
-  if(!ids)return showErr('URL not recognised. Need: https://app.clickup.com/{workspace}/v/s/{space}');
-  if(WORKER_URL==='PASTE_WORKER_URL_HERE')return showErr('Open index.html and set WORKER_URL to your Cloudflare Worker URL. See setup steps below.');
-  localStorage.setItem('cu_url',rawUrl);
+
+  const token = document.getElementById('ikey').value.trim();
+  const rawUrl = document.getElementById('iurl').value.trim();
+
+  if(!token) return showErr('Enter your ClickUp API token.');
+  if(!rawUrl) return showErr('Enter your ClickUp space URL.');
+  const ids = parseURL(rawUrl);
+  if(!ids) return showErr('URL not recognised. Need: https://app.clickup.com/{workspace}/v/s/{space}');
+
+  localStorage.setItem('cu_key', token);
+  localStorage.setItem('cu_url', rawUrl);
+
   setLoading(true);
   document.getElementById('prog-wrap').style.display='block';
   document.getElementById('dash').style.display='none';
-  log(`workspace=${ids.w} space=${ids.s}`,'ok');
-  log('Calling Claude + ClickUp MCP…','sp');
-  try{
-    const data=await fetchData(ids);
-    log('Data received — building dashboard…','ok');
-    render(data,ids);
-    log('Done!','ok');
+
+  try {
+    log(`Fetching space info…`, 'sp');
+    const spaceData = await cuFetch(token, `/space/${ids.s}`);
+    const spaceName = spaceData.name || 'Dashboard';
+    log(`Space: ${spaceName}`, 'ok');
+
+    log('Fetching lists…', 'sp');
+    const listsData = await cuFetch(token, `/space/${ids.s}/list?archived=false`);
+    const lists = listsData.lists || [];
+    log(`Found ${lists.length} lists`, 'ok');
+
+    // Also fetch lists inside folders
+    log('Fetching folders…', 'sp');
+    const foldersData = await cuFetch(token, `/space/${ids.s}/folder?archived=false`);
+    const folders = foldersData.folders || [];
+    for(const folder of folders){
+      const fl = await cuFetch(token, `/folder/${folder.id}/list?archived=false`);
+      if(fl.lists) lists.push(...fl.lists);
+    }
+    log(`Total lists: ${lists.length}`, 'ok');
+
+    // Fetch tasks from all lists
+    let allTasks = [];
+    for(const list of lists){
+      log(`Fetching tasks from "${list.name}"…`, 'sp');
+      let page = 0;
+      while(true){
+        const td = await cuFetch(token, `/list/${list.id}/task?include_closed=true&subtasks=true&page=${page}`);
+        const tasks = td.tasks || [];
+        allTasks.push(...tasks.map(t => ({
+          id: t.id,
+          name: t.name,
+          status: t.status?.status || '',
+          priority: prioLabel(t.priority?.priority),
+          list: list.name,
+          url: t.url,
+          due_date: t.due_date,
+          assignees: (t.assignees||[]).map(a=>a.username||a.email).filter(Boolean)
+        })));
+        if(tasks.length < 100) break;
+        page++;
+      }
+    }
+    log(`Total tasks: ${allTasks.length}`, 'ok');
+
+    // Build aggregates
+    const projects = lists.map(l=>({
+      name: l.name,
+      taskCount: allTasks.filter(t=>t.list===l.name).length
+    })).filter(p=>p.taskCount>0);
+
+    const statusCounts={}, priorityCounts={}, assigneeCounts={};
+    for(const t of allTasks){
+      const s=(t.status||'').toLowerCase();
+      statusCounts[s]=(statusCounts[s]||0)+1;
+      const p=t.priority||'none';
+      priorityCounts[p]=(priorityCounts[p]||0)+1;
+      for(const a of t.assignees) assigneeCounts[a]=(assigneeCounts[a]||0)+1;
+    }
+
+    log('Rendering dashboard…', 'sp');
+    render({spaceName, projects, tasks:allTasks, statusCounts, priorityCounts, assigneeCounts}, ids);
+    log('Done!', 'ok');
     setTimeout(()=>{document.getElementById('prog-wrap').style.display='none'},1200);
-  }catch(e){log('Error: '+e.message,'er');showErr(e.message);}
-  finally{setLoading(false)}
+
+  } catch(e){
+    log('Error: '+e.message, 'er');
+    showErr(e.message);
+  } finally {
+    setLoading(false);
+  }
 }
 
-async function fetchData(ids){
-  const prompt=`You have access to the ClickUp MCP server.
-1. Call clickup_get_workspace_hierarchy with workspace_id="${ids.w}", space_ids=["${ids.s}"], max_depth=2
-2. Call clickup_filter_tasks with space_ids=["${ids.s}"], workspace_id="${ids.w}", include_closed=true, subtasks=true
-Return ONLY valid JSON (no markdown, no backticks):
-{"spaceName":"","projects":[{"id":"","name":"","taskCount":0}],"tasks":[{"id":"","name":"","status":"","priority":null,"list":"","url":"","assignees":[]}],"assigneeCounts":{},"statusCounts":{},"priorityCounts":{}}
-Rules: priority=urgent/high/normal/low/null. Use "none" for null in priorityCounts. Skip null usernames.`;
-
-  const res=await fetch(WORKER_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:8000,messages:[{role:'user',content:prompt}],mcp_servers:[{type:'url',url:'https://mcp.clickup.com/mcp',name:'clickup'}]})
-  });
-  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e?.error?.message||`Error ${res.status}`)}
-  const body=await res.json();
-  const txt=(body.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
-  if(!txt)throw new Error('No response — is ClickUp connected at claude.ai/settings/integrations?');
-  try{return JSON.parse(txt.replace(/```json|```/g,'').trim())}
-  catch{console.error(txt);throw new Error('Parse failed — see console')}
-}
-
-function render(data,ids){
-  const total=data.tasks?.length||0,urgent=data.priorityCounts?.urgent||0,
-    inprog=data.statusCounts?.['in progress']||0,live=data.statusCounts?.live||0,
-    pft=data.statusCounts?.['pending for testing']||0;
+function render(data, ids){
+  const total=data.tasks.length;
+  const urgent=data.priorityCounts?.urgent||0;
+  const inprog=data.statusCounts?.['in progress']||0;
+  const live=data.statusCounts?.live||0;
+  const pft=data.statusCounts?.['pending for testing']||0;
   const cm={};(data.projects||[]).forEach((p,i)=>{cm[p.name]=PC[i%PC.length]});
+
   const maxP=Math.max(...(data.projects||[]).map(p=>p.taskCount),1);
   const projB=(data.projects||[]).sort((a,b)=>b.taskCount-a.taskCount).map(p=>
     `<div class="br"><span class="bl" title="${esc(p.name)}">${esc(p.name)}</span><div class="bt"><div class="bf" style="width:${bw(p.taskCount,maxP)}%;background:${cm[p.name]||'#7c6af7'}"></div></div><span class="bc">${p.taskCount}</span></div>`).join('');
+
   const sord=[['to do','To do'],['in progress','In progress'],['pending for testing','Pending test'],['uat','UAT'],['release to uat','Release to UAT'],['live','Live']];
+  const SC={s0:'#4b4b5e',s1:'#7c6af7',s2:'#fbbf24',s3:'#34d399',s4:'#60a5fa',s5:'#34d399'};
   const maxS=Math.max(...sord.map(([k])=>data.statusCounts?.[k]||0),1);
   const statB=sord.map(([k,l])=>{const c=data.statusCounts?.[k]||0;if(!c)return'';const sc=scls(k);return`<div class="srow"><span class="badge ${sc}">${l}</span><div class="bt" style="flex:1"><div class="bf" style="width:${bw(c,maxS)}%;background:${SC[sc]||'#888'}"></div></div><span style="font-size:11px;color:var(--muted);min-width:24px;text-align:right">${c}</span></div>`}).join('');
+
   const pord=[{k:'urgent',l:'Urgent',c:'#f87171'},{k:'high',l:'High',c:'#fbbf24'},{k:'normal',l:'Normal',c:'#60a5fa'},{k:'low',l:'Low',c:'#6b6b80'},{k:'none',l:'None',c:'#2a2a35'}];
   const maxR=Math.max(...pord.map(p=>data.priorityCounts?.[p.k]||0),1);
   const prioB=pord.map(p=>{const c=data.priorityCounts?.[p.k]||0;if(!c)return'';return`<div class="br"><span class="bl">${p.l}</span><div class="bt"><div class="bf" style="width:${bw(c,maxR)}%;background:${p.c}"></div></div><span class="bc">${c}</span></div>`}).join('');
+
   const maxA=Math.max(...Object.values(data.assigneeCounts||{}),1);
   const assH=Object.entries(data.assigneeCounts||{}).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n,c])=>
     `<div class="arow"><div class="av">${ini(n)}</div><span class="an">${esc(n)}</span><div class="bt" style="width:60px"><div class="bf" style="width:${bw(c,maxA)}%;background:var(--accent)"></div></div><span style="font-size:11px;color:var(--muted)">${c}</span></div>`).join('');
+
   const projs=['All',...(data.projects||[]).map(p=>p.name)];
   const fbtns=projs.map(p=>`<button class="fb${p==='All'?' active':''}" onclick="ft(${JSON.stringify(p)})">${p==='All'?'All':esc(p)}</button>`).join('');
+
   const trows=(data.tasks||[]).map(t=>{const pc=cm[t.list]||'#7c6af7';return`<tr data-p="${esc(t.list||'')}"><td><span class="tn" title="${esc(t.name)}">${esc(t.name)}</span></td><td><span class="pt" style="border-left:2px solid ${pc};padding-left:5px">${esc(t.list||'')}</span></td><td><span class="badge ${scls(t.status||'')}">${esc(t.status||'')}</span></td><td><div style="display:flex;align-items:center;gap:4px"><span class="pdot ${pcls(t.priority)}"></span><span style="font-size:10px;color:var(--muted)">${t.priority||'—'}</span></div></td><td>${t.url?`<a href="${t.url}" target="_blank" class="tl">↗</a>`:''}</td></tr>`}).join('');
+
   const now=new Date().toLocaleString();
   const el=document.getElementById('dash');
   el.innerHTML=`
@@ -220,6 +295,7 @@ function render(data,ids){
   document.getElementById('hmeta').textContent=data.spaceName||'';
   window._rows=[...document.querySelectorAll('#tb tr')];
 }
+
 window.ft=function(p){
   document.querySelectorAll('.fb').forEach(b=>b.classList.toggle('active',b.textContent===(p==='All'?'All':p)));
   const tb=document.getElementById('tb');tb.innerHTML='';
