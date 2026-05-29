@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080c14;
+  --surface: #0d1320;
+  --surface2: #111827;
+  --surface3: #1a2235;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.1);
+  --gold: #c9a84c;
+  --gold2: #e8c96a;
+  --gold-dim: rgba(201,168,76,0.12);
+  --text: #e8edf5;
+  --text2: #94a3b8;
+  --text3: #4a5568;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --purple: #8b5cf6;
+  --teal: #14b8a6;
+  --font-display: 'Playfair Display', serif;
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --r: 8px;
+  --r-lg: 14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* ── SETUP ── */
+.setup-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; background: var(--bg); }
+.setup-box { width: 100%; max-width: 480px; }
+.setup-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; }
+.setup-title { font-family: var(--font-display); font-size: 40px; line-height: 1.1; color: var(--text); margin-bottom: .5rem; }
+.setup-sub { color: var(--text2); font-size: 13px; font-weight: 300; margin-bottom: 2.5rem; line-height: 1.6; }
+.form-group { margin-bottom: 1.25rem; }
+.form-label { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text2); margin-bottom: 6px; display: block; }
+.form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--r); padding: 12px 14px; font-size: 13px; font-family: var(--mono); color: var(--text); outline: none; transition: border-color .2s, box-shadow .2s; }
+.form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.1); }
+.form-input::placeholder { color: var(--text3); }
+.form-hint { font-size: 11px; color: var(--text3); margin-top: 5px; line-height: 1.5; }
+.form-hint a { color: var(--gold); text-decoration: none; }
+.btn-primary { width: 100%; padding: 13px 20px; background: var(--gold); color: #080c14; border: none; border-radius: var(--r); font-size: 13px; font-weight: 600; font-family: var(--font); letter-spacing: .04em; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-primary:hover { background: var(--gold2); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+.error-msg { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25); border-radius: var(--r); padding: .75rem 1rem; font-size: 12px; color: #fca5a5; margin-top: 1rem; font-family: var(--mono); line-height: 1.5; }
+
+/* ── PROGRESS ── */
+#prog-wrap { position: fixed; bottom: 2rem; right: 2rem; width: 340px; z-index: 999; display: none; }
+.prog-box { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--r-lg); padding: 1rem 1.25rem; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.prog-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.log-line { font-family: var(--mono); font-size: 11px; color: var(--text3); padding: 2px 0; animation: fadeup .2s ease; }
+.log-line.ok { color: var(--success); }
+.log-line.sp { color: var(--gold); }
+.log-line.er { color: var(--danger); }
+@keyframes fadeup { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+/* ── DASHBOARD ── */
+#dash { display: none; }
+
+/* topbar */
+.topbar { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 2.5rem; background: var(--surface); position: sticky; top: 0; z-index: 100; }
+.topbar-brand { font-family: var(--font-display); font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.topbar-brand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); display: block; }
+.topbar-right { display: flex; align-items: center; gap: 1.5rem; }
+.topbar-meta { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.topbar-space { font-family: var(--mono); font-size: 11px; color: var(--gold); background: var(--gold-dim); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(201,168,76,.2); }
+.btn-refresh { background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--r); color: var(--text2); font-size: 12px; font-family: var(--font); font-weight: 500; padding: 7px 14px; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px; }
+.btn-refresh:hover { border-color: var(--gold); color: var(--gold); }
+
+/* main layout */
+.dash-body { max-width: 1400px; margin: 0 auto; padding: 2.5rem 2.5rem 5rem; }
+
+/* section headers */
+.section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; margin-top: 2.5rem; }
+.section-head:first-child { margin-top: 0; }
+.section-line { flex: 1; height: 1px; background: var(--border); }
+.section-label { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--text3); white-space: nowrap; }
+.section-num { font-family: var(--mono); font-size: 10px; color: var(--gold); background: var(--gold-dim); padding: 2px 7px; border-radius: 10px; }
+
+/* KPI row */
+.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 2rem; }
+@media(max-width:1100px){ .kpi-row { grid-template-columns: repeat(3, 1fr); } }
+@media(max-width:600px){ .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.25rem 1.25rem 1rem; position: relative; overflow: hidden; transition: border-color .2s; }
+.kpi:hover { border-color: var(--border2); }
+.kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.kpi.c-gold::before { background: var(--gold); }
+.kpi.c-success::before { background: var(--success); }
+.kpi.c-danger::before { background: var(--danger); }
+.kpi.c-warning::before { background: var(--warning); }
+.kpi.c-info::before { background: var(--info); }
+.kpi.c-purple::before { background: var(--purple); }
+.kpi-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+.kpi-val { font-family: var(--font-display); font-size: 36px; line-height: 1; color: var(--text); margin-bottom: 4px; }
+.kpi-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.kpi.c-gold .kpi-val { color: var(--gold); }
+.kpi.c-success .kpi-val { color: var(--success); }
+.kpi.c-danger .kpi-val { color: var(--danger); }
+.kpi.c-warning .kpi-val { color: var(--warning); }
+.kpi.c-info .kpi-val { color: var(--info); }
+.kpi.c-purple .kpi-val { color: var(--purple); }
+
+/* card */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.5rem; }
+.card-title { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+.card-title-count { font-family: var(--mono); color: var(--text2); font-size: 11px; background: var(--surface3); padding: 2px 8px; border-radius: 10px; }
+
+/* grid layouts */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-13 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 16px; }
+.grid-31 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media(max-width:900px){ .grid-2,.grid-3,.grid-13,.grid-31 { grid-template-columns: 1fr; } }
+
+/* bar rows */
+.bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bar-label { font-size: 12px; color: var(--text2); width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); }
+.bar-track { flex: 1; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+.bar-count { font-size: 11px; color: var(--text3); width: 30px; text-align: right; font-family: var(--mono); }
+.bar-pct { font-size: 10px; color: var(--text3); width: 34px; text-align: right; font-family: var(--mono); }
+
+/* badges */
+.badge { display: inline-flex; align-items: center; font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 20px; letter-spacing: .05em; text-transform: uppercase; font-family: var(--mono); white-space: nowrap; border: 1px solid transparent; }
+.b-todo    { background: rgba(148,163,184,.08); color: var(--text3); border-color: rgba(148,163,184,.12); }
+.b-inprog  { background: rgba(139,92,246,.12); color: #a78bfa; border-color: rgba(139,92,246,.2); }
+.b-pft     { background: rgba(245,158,11,.1); color: var(--warning); border-color: rgba(245,158,11,.2); }
+.b-uat     { background: rgba(16,185,129,.1); color: var(--success); border-color: rgba(16,185,129,.2); }
+.b-ruat    { background: rgba(59,130,246,.1); color: var(--info); border-color: rgba(59,130,246,.2); }
+.b-live    { background: rgba(16,185,129,.15); color: #34d399; border-color: rgba(16,185,129,.25); }
+.b-other   { background: rgba(148,163,184,.08); color: var(--text3); border-color: rgba(148,163,184,.12); }
+.b-urgent  { background: rgba(239,68,68,.1); color: var(--danger); border-color: rgba(239,68,68,.2); }
+.b-high    { background: rgba(245,158,11,.1); color: var(--warning); border-color: rgba(245,158,11,.2); }
+.b-normal  { background: rgba(59,130,246,.1); color: var(--info); border-color: rgba(59,130,246,.2); }
+.b-low     { background: rgba(148,163,184,.08); color: var(--text3); border-color: rgba(148,163,184,.12); }
+
+/* priority dot */
+.pdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.pd-urgent { background: var(--danger); box-shadow: 0 0 4px rgba(239,68,68,.5); }
+.pd-high   { background: var(--warning); }
+.pd-normal { background: var(--info); }
+.pd-low    { background: var(--text3); }
+.pd-none   { background: var(--surface3); }
+
+/* pie chart legend */
+.pie-container { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+.pie-canvas-wrap { position: relative; width: 200px; height: 200px; flex-shrink: 0; }
+.pie-legend { flex: 1; min-width: 160px; }
+.legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: background .15s; }
+.legend-row:hover { background: var(--surface3); }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.legend-name { font-size: 12px; color: var(--text2); flex: 1; }
+.legend-val { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.legend-pct { font-family: var(--mono); font-size: 11px; color: var(--gold); min-width: 36px; text-align: right; }
+
+/* assignee cards */
+.asgn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.asgn-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.25rem; transition: border-color .2s; }
+.asgn-card:hover { border-color: var(--border2); }
+.asgn-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.asgn-avatar { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; font-family: var(--font); flex-shrink: 0; }
+.asgn-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.asgn-count { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.asgn-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.asgn-stat { background: var(--surface3); border-radius: 6px; padding: 8px 10px; }
+.asgn-stat-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+.asgn-stat-val { font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+.asgn-stat-bar { margin-top: 8px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.asgn-stat-bar-fill { height: 100%; border-radius: 2px; }
+
+/* project health */
+.proj-health-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.proj-health-row:last-child { border-bottom: none; }
+.proj-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.proj-name { font-size: 12px; color: var(--text); flex: 1; font-weight: 500; }
+.proj-total { font-family: var(--mono); font-size: 11px; color: var(--text3); width: 32px; text-align: right; }
+.proj-stack { flex: 1; max-width: 180px; height: 8px; border-radius: 4px; overflow: hidden; display: flex; }
+.proj-stack-seg { height: 100%; transition: width .8s; }
+.proj-pcts { display: flex; gap: 6px; }
+
+/* task table */
+.tbl-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+.filter-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); padding-right: 4px; align-self: center; font-family: var(--mono); }
+.fbtn { font-size: 10px; font-family: var(--mono); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border2); background: transparent; color: var(--text3); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.fbtn:hover { border-color: var(--gold); color: var(--gold); }
+.fbtn.active { background: var(--gold); border-color: var(--gold); color: #080c14; font-weight: 600; }
+.tbl-search { margin-left: auto; }
+.search-input { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--r); padding: 6px 12px; font-size: 12px; font-family: var(--mono); color: var(--text); outline: none; width: 200px; transition: border-color .2s; }
+.search-input:focus { border-color: var(--gold); }
+.search-input::placeholder { color: var(--text3); }
+
+table { width: 100%; border-collapse: collapse; }
+thead th { font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); padding: 0 12px 10px 0; text-align: left; border-bottom: 1px solid var(--border2); font-family: var(--mono); white-space: nowrap; cursor: pointer; user-select: none; }
+thead th:hover { color: var(--gold); }
+thead th.sorted { color: var(--gold); }
+thead th .sort-arrow { opacity: .5; margin-left: 3px; }
+thead th.sorted .sort-arrow { opacity: 1; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,.02); }
+tbody td { padding: 10px 12px 10px 0; vertical-align: middle; }
+.td-name { max-width: 280px; }
+.task-name-text { font-size: 12px; color: var(--text); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-list { font-size: 10px; color: var(--text3); font-family: var(--mono); white-space: nowrap; }
+.td-list-dot { display: inline-block; width: 6px; height: 6px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.td-asgn { display: flex; gap: 3px; flex-wrap: wrap; }
+.mini-av { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 600; }
+.td-link { color: var(--text3); text-decoration: none; font-size: 12px; transition: color .15s; }
+.td-link:hover { color: var(--gold); }
+.td-due { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.td-due.overdue { color: var(--danger); }
+
+/* empty state */
+.empty { text-align: center; padding: 3rem; color: var(--text3); font-size: 13px; }
+
+/* spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(201,168,76,.2); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
+
+/* chart canvas wrapper */
+.chart-wrap { position: relative; }
+
+/* overdue badge */
+.overdue-badge { background: rgba(239,68,68,.1); color: var(--danger); border: 1px solid rgba(239,68,68,.2); font-size: 9px; font-family: var(--mono); padding: 1px 6px; border-radius: 10px; margin-left: 6px; }
+
+/* table pagination */
+.tbl-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.tbl-info { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.page-btns { display: flex; gap: 4px; }
+.page-btn { background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; color: var(--text2); font-size: 11px; font-family: var(--mono); padding: 5px 10px; cursor: pointer; transition: all .15s; }
+.page-btn:hover { border-color: var(--gold); color: var(--gold); }
+.page-btn.active { background: var(--gold); border-color: var(--gold); color: #080c14; font-weight: 600; }
+.page-btn:disabled { opacity: .3; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- SETUP PAGE -->
+<div class="setup-page" id="setup-page">
+  <div class="setup-box">
+    <div class="setup-eyebrow">Project Intelligence</div>
+    <h1 class="setup-title">Executive<br>Dashboard</h1>
+    <p class="setup-sub">Real-time project health, team performance, and delivery insights — powered directly by ClickUp.</p>
+    <div class="form-group">
+      <label class="form-label">ClickUp API Token</label>
+      <input type="password" class="form-input" id="ikey" placeholder="pk_xxxxxxxx_XXXXXXXXXXXXXXXXXX"/>
+      <p class="form-hint">ClickUp → Settings → Apps → API Token. Stored in your browser only.</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Space URL</label>
+      <input type="url" class="form-input" id="iurl" placeholder="https://app.clickup.com/90161601633/v/s/90166936041"/>
+      <p class="form-hint">Copy the URL from your ClickUp space view.</p>
+    </div>
+    <button class="btn-primary" id="gbtn" onclick="generate()">
+      <span id="gicon">→</span>
+      <span id="gtxt">Generate Dashboard</span>
+    </button>
+    <div id="ebox"></div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div id="prog-wrap">
+  <div class="prog-box">
+    <div class="prog-title">Loading data</div>
+    <div id="plog"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <div class="topbar">
+    <div class="topbar-brand" id="tb-brand">Project Dashboard</div>
+    <div class="topbar-right">
+      <span class="topbar-space" id="tb-space"></span>
+      <span class="topbar-meta" id="tb-meta"></span>
+      <button class="btn-refresh" onclick="generate()">↻ Refresh</button>
+      <button class="btn-refresh" onclick="goBack()" style="color:var(--text3)">← New</button>
+    </div>
+  </div>
+
+  <div class="dash-body">
+
+    <!-- KPIs -->
+    <div id="kpi-row" class="kpi-row"></div>
+
+    <!-- Overview charts -->
+    <div class="section-head"><div class="section-label">Project overview</div><div class="section-line"></div></div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">Status distribution</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="statusChart" role="img" aria-label="Status distribution chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Priority breakdown</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="prioChart" role="img" aria-label="Priority breakdown chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tasks by project</div>
+        <div id="proj-bars"></div>
+      </div>
+    </div>
+
+    <!-- Project health stacked -->
+    <div class="grid-31">
+      <div class="card">
+        <div class="card-title">Project health <span style="font-size:9px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">— status composition per list</span></div>
+        <div id="proj-health"></div>
+        <div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:#8b5cf6"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">In progress</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:#f59e0b"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">Pending test</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:#10b981"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">UAT / Live</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:#334155"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">To do</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Completion rate</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="completionChart" role="img" aria-label="Completion rate chart"></canvas></div>
+        <div id="completion-legend" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- Assignees -->
+    <div class="section-head"><div class="section-label">Team performance</div><div class="section-line"></div></div>
+    <div class="grid-13">
+      <div class="card">
+        <div class="card-title">Workload distribution</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="workloadChart" role="img" aria-label="Workload distribution chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Assignee share</div>
+        <div class="pie-container">
+          <div class="pie-canvas-wrap"><canvas id="pieChart" role="img" aria-label="Assignee share pie chart"></canvas></div>
+          <div class="pie-legend" id="pie-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignee cards -->
+    <div class="asgn-grid" id="asgn-cards"></div>
+
+    <!-- Task table -->
+    <div class="section-head"><div class="section-label">Task registry</div><div class="section-line"></div><div class="section-num" id="task-count-label">0 tasks</div></div>
+    <div class="card">
+      <div class="tbl-controls">
+        <div class="filter-group">
+          <span class="filter-label">Project</span>
+          <div id="proj-filters"></div>
+        </div>
+        <div class="filter-group" style="margin-left:1rem">
+          <span class="filter-label">Status</span>
+          <div id="status-filters"></div>
+        </div>
+        <div class="filter-group" style="margin-left:1rem">
+          <span class="filter-label">Priority</span>
+          <div id="prio-filters"></div>
+        </div>
+        <div class="tbl-search">
+          <input class="search-input" type="text" id="task-search" placeholder="Search tasks…" oninput="applyFilters()"/>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('name')" style="width:30%">Task <span class="sort-arrow" id="sort-name">↕</span></th>
+            <th onclick="sortTable('list')" style="width:13%">Project <span class="sort-arrow" id="sort-list">↕</span></th>
+            <th onclick="sortTable('status')" style="width:12%">Status <span class="sort-arrow" id="sort-status">↕</span></th>
+            <th onclick="sortTable('priority')" style="width:10%">Priority <span class="sort-arrow" id="sort-priority">↕</span></th>
+            <th style="width:18%">Assignees</th>
+            <th onclick="sortTable('due')" style="width:10%">Due <span class="sort-arrow" id="sort-due">↕</span></th>
+            <th style="width:4%"></th>
+          </tr>
+        </thead>
+        <tbody id="task-tbody"></tbody>
+      </table>
+      <div class="tbl-footer">
+        <div class="tbl-info" id="tbl-info"></div>
+        <div class="page-btns" id="page-btns"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── palette ──────────────────────────────────────────────────────────────────
+const PAL = ['#c9a84c','#8b5cf6','#10b981','#3b82f6','#ef4444','#14b8a6','#f59e0b','#e879f9','#4ade80','#fb923c','#60a5fa','#34d399'];
+
+// ── state ─────────────────────────────────────────────────────────────────────
+let G = { tasks:[], projects:[], acm:{}, assigneeDetail:{}, statusCounts:{}, priorityCounts:{}, spaceName:'' };
+let F = { project:'All', status:'All', priority:'All', search:'', sort:'name', dir:1 };
+let PAGE = 0; const PAGE_SIZE = 25;
+const charts = {};
+
+// ── utils ─────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function ini(n){return(n||'?').split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)}
+function bw(v,m){return m?Math.max(2,Math.round(v/m*100)):0}
+function prioLabel(p){return{1:'urgent',2:'high',3:'normal',4:'low'}[p]||null}
+function rgba(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`}
+function formatDate(ms){if(!ms)return'—';const d=new Date(Number(ms));return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}
+function isOverdue(ms){return ms&&Date.now()>Number(ms)}
+function scls(s){return{'to do':'b-todo','in progress':'b-inprog','pending for testing':'b-pft','uat':'b-uat','release to uat':'b-ruat','live':'b-live'}[(s||'').toLowerCase()]||'b-other'}
+function pcls(p){return{urgent:'b-urgent',high:'b-high',normal:'b-normal',low:'b-low'}[p]||'b-other'}
+function pdcls(p){return{urgent:'pd-urgent',high:'pd-high',normal:'pd-normal',low:'pd-low'}[p]||'pd-none'}
+function statusLabel(s){return{'to do':'To Do','in progress':'In Progress','pending for testing':'Pending Test','uat':'UAT','release to uat':'Release to UAT','live':'Live'}[(s||'').toLowerCase()]||s}
+function destroyChart(k){if(charts[k]){charts[k].destroy();delete charts[k];}}
+
+function log(msg,cls=''){
+  $('prog-wrap').style.display='block';
+  const d=document.createElement('div');d.className='log-line '+cls;
+  d.textContent=`${new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'})} ${msg}`;
+  $('plog').appendChild(d);$('plog').scrollTop=$('plog').scrollHeight;
+}
+function setLoading(on){
+  $('gbtn').disabled=on;
+  $('gicon').innerHTML=on?'<span class="spin"></span>':'→';
+  $('gtxt').textContent=on?'Loading…':'Generate Dashboard';
+}
+function showErr(m){$('ebox').innerHTML=`<div class="error-msg">${m}</div>`}
+
+// ── restore ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  const k=localStorage.getItem('cu_key')||'';
+  const u=localStorage.getItem('cu_url')||'';
+  if(k)$('ikey').value=k;
+  if(u)$('iurl').value=u;
+});
+
+function goBack(){
+  ['statusChart','prioChart','completionChart','workloadChart','pieChart'].forEach(destroyChart);
+  $('dash').style.display='none';
+  $('setup-page').style.display='flex';
+}
+
+// ── API ────────────────────────────────────────────────────────────────────────
+function parseURL(u){const m=u.match(/app\.clickup\.com\/(\d+)\/v\/[sl]\/(\d+)/);return m?{w:m[1],s:m[2]}:null}
+async function cuFetch(token,path){
+  const res=await fetch(`https://api.clickup.com/api/v2${path}`,{headers:{'Authorization':token}});
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.err||e.error||`ClickUp error ${res.status}`);}
+  return res.json();
+}
+
+async function generate(){
+  $('ebox').innerHTML='';$('plog').innerHTML='';
+  const token=$('ikey').value.trim();
+  const rawUrl=$('iurl').value.trim();
+  if(!token)return showErr('Enter your ClickUp API token.');
+  if(!rawUrl)return showErr('Enter your ClickUp space URL.');
+  const ids=parseURL(rawUrl);
+  if(!ids)return showErr('URL not recognised. Format: https://app.clickup.com/{workspace}/v/s/{space}');
+  localStorage.setItem('cu_key',token);
+  localStorage.setItem('cu_url',rawUrl);
+  setLoading(true);
+
+  try{
+    log('Connecting to ClickUp…','sp');
+    const spaceData=await cuFetch(token,`/space/${ids.s}`);
+    G.spaceName=spaceData.name||'Dashboard';
+    log(`Space: ${G.spaceName}`,'ok');
+
+    const [listsData,foldersData]=await Promise.all([
+      cuFetch(token,`/space/${ids.s}/list?archived=false`),
+      cuFetch(token,`/space/${ids.s}/folder?archived=false`)
+    ]);
+    const lists=[...(listsData.lists||[])];
+    for(const f of foldersData.folders||[]){
+      const fl=await cuFetch(token,`/folder/${f.id}/list?archived=false`);
+      if(fl.lists)lists.push(...fl.lists);
+    }
+    log(`${lists.length} lists found`,'ok');
+
+    G.tasks=[];
+    for(const list of lists){
+      log(`Fetching "${list.name}"…`,'sp');
+      let page=0;
+      while(true){
+        const td=await cuFetch(token,`/list/${list.id}/task?include_closed=true&subtasks=true&page=${page}`);
+        const tasks=td.tasks||[];
+        G.tasks.push(...tasks.map(t=>({
+          id:t.id, name:t.name,
+          status:(t.status?.status||'').toLowerCase(),
+          priority:prioLabel(t.priority?.priority),
+          list:list.name, listId:list.id, url:t.url,
+          due_date:t.due_date||null,
+          assignees:(t.assignees||[]).map(a=>a.username||a.email).filter(Boolean)
+        })));
+        if(tasks.length<100)break;page++;
+      }
+    }
+    log(`${G.tasks.length} tasks loaded`,'ok');
+
+    // build aggregates
+    G.projects=lists.map((l,i)=>({
+      name:l.name,id:l.id,
+      taskCount:G.tasks.filter(t=>t.list===l.name).length,
+      color:PAL[i%PAL.length]
+    })).filter(p=>p.taskCount>0);
+
+    G.acm={};G.assigneeDetail={};G.statusCounts={};G.priorityCounts={};
+    for(const t of G.tasks){
+      const s=t.status||'unknown';
+      G.statusCounts[s]=(G.statusCounts[s]||0)+1;
+      const p=t.priority||'none';
+      G.priorityCounts[p]=(G.priorityCounts[p]||0)+1;
+      for(const a of t.assignees){
+        G.acm[a]=(G.acm[a]||0)+1;
+        if(!G.assigneeDetail[a])G.assigneeDetail[a]={total:0,statuses:{},priorities:{},projects:{}};
+        G.assigneeDetail[a].total++;
+        G.assigneeDetail[a].statuses[s]=(G.assigneeDetail[a].statuses[s]||0)+1;
+        G.assigneeDetail[a].priorities[p]=(G.assigneeDetail[a].priorities[p]||0)+1;
+        G.assigneeDetail[a].projects[t.list]=(G.assigneeDetail[a].projects[t.list]||0)+1;
+      }
+    }
+
+    log('Rendering dashboard…','sp');
+    $('setup-page').style.display='none';
+    $('dash').style.display='block';
+    renderAll();
+    log('Ready','ok');
+    setTimeout(()=>{ $('prog-wrap').style.display='none'; },1500);
+
+  }catch(e){
+    log('Error: '+e.message,'er');
+    showErr(e.message);
+    $('prog-wrap').style.display='block';
+  }finally{ setLoading(false); }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderAll(){
+  $('tb-brand').textContent=G.spaceName+' — Executive Dashboard';
+  $('tb-space').textContent=G.spaceName;
+  $('tb-meta').textContent='Updated '+new Date().toLocaleTimeString();
+
+  renderKPIs();
+  renderStatusChart();
+  renderPrioChart();
+  renderProjectBars();
+  renderProjectHealth();
+  renderCompletionChart();
+  renderWorkloadChart();
+  renderPieChart();
+  renderAssigneeCards();
+  buildFilters();
+  applyFilters();
+}
+
+function renderKPIs(){
+  const total=G.tasks.length;
+  const done=(G.statusCounts['live']||0)+(G.statusCounts['uat']||0)+(G.statusCounts['release to uat']||0);
+  const inprog=G.statusCounts['in progress']||0;
+  const urgent=G.priorityCounts['urgent']||0;
+  const overdue=G.tasks.filter(t=>isOverdue(t.due_date)&&t.status!=='live').length;
+  const unassigned=G.tasks.filter(t=>t.assignees.length===0).length;
+  const compPct=total?Math.round(done/total*100):0;
+  $('kpi-row').innerHTML=`
+    <div class="kpi c-gold"><div class="kpi-label">Total tasks</div><div class="kpi-val">${total}</div><div class="kpi-sub">across ${G.projects.length} projects</div></div>
+    <div class="kpi c-success"><div class="kpi-label">Completed</div><div class="kpi-val">${done}</div><div class="kpi-sub">${compPct}% completion rate</div></div>
+    <div class="kpi c-purple"><div class="kpi-label">In progress</div><div class="kpi-val">${inprog}</div><div class="kpi-sub">active work</div></div>
+    <div class="kpi c-danger"><div class="kpi-label">Urgent</div><div class="kpi-val">${urgent}</div><div class="kpi-sub">needs immediate attention</div></div>
+    <div class="kpi c-warning"><div class="kpi-label">Overdue</div><div class="kpi-val">${overdue}</div><div class="kpi-sub">past due date</div></div>
+    <div class="kpi c-info"><div class="kpi-label">Team size</div><div class="kpi-val">${Object.keys(G.acm).length}</div><div class="kpi-sub">${unassigned} unassigned tasks</div></div>`;
+}
+
+function renderStatusChart(){
+  const order=[['to do','#334155'],['in progress','#8b5cf6'],['pending for testing','#f59e0b'],['uat','#10b981'],['release to uat','#3b82f6'],['live','#34d399']];
+  const labels=order.map(([k])=>statusLabel(k));
+  const values=order.map(([k])=>G.statusCounts[k]||0);
+  const colors=order.map(([,c])=>c);
+  destroyChart('statusChart');
+  const ctx=$('statusChart').getContext('2d');
+  charts['statusChart']=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{data:values,backgroundColor:colors.map(c=>rgba(c,.75)),borderColor:colors,borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1}},scales:{x:{grid:{display:false},ticks:{color:'#4a5568',font:{family:'IBM Plex Mono',size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5568',font:{family:'IBM Plex Mono',size:9}}}}}
+  });
+}
+
+function renderPrioChart(){
+  const order=[['urgent','#ef4444'],['high','#f59e0b'],['normal','#3b82f6'],['low','#4a5568'],['none','#1e293b']];
+  const labels=['Urgent','High','Normal','Low','None'];
+  const values=order.map(([k])=>G.priorityCounts[k]||0);
+  const colors=order.map(([,c])=>c);
+  destroyChart('prioChart');
+  const ctx=$('prioChart').getContext('2d');
+  charts['prioChart']=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data:values,backgroundColor:colors.map(c=>rgba(c,.8)),borderColor:colors,borderWidth:1.5,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,callbacks:{label:ctx=>{const t=values.reduce((a,b)=>a+b,0);return ` ${ctx.parsed} tasks (${t?Math.round(ctx.parsed/t*100):0}%)`;}}}}}}
+  });
+}
+
+function renderProjectBars(){
+  const sorted=[...G.projects].sort((a,b)=>b.taskCount-a.taskCount);
+  const max=Math.max(...sorted.map(p=>p.taskCount),1);
+  const total=G.tasks.length;
+  $('proj-bars').innerHTML=sorted.map(p=>`
+    <div class="bar-item">
+      <div class="bar-label" title="${esc(p.name)}">${esc(p.name)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${bw(p.taskCount,max)}%;background:${p.color}"></div></div>
+      <div class="bar-count">${p.taskCount}</div>
+      <div class="bar-pct">${total?Math.round(p.taskCount/total*100):0}%</div>
+    </div>`).join('');
+}
+
+function renderProjectHealth(){
+  const STATUS_GROUPS={
+    'in progress':'#8b5cf6','pending for testing':'#f59e0b',
+    'uat':'#10b981','release to uat':'#10b981','live':'#10b981',
+    'to do':'#334155'
+  };
+  $('proj-health').innerHTML=G.projects.sort((a,b)=>b.taskCount-a.taskCount).map(p=>{
+    const tasks=G.tasks.filter(t=>t.list===p.name);
+    const grps={inprog:0,pft:0,done:0,todo:0};
+    tasks.forEach(t=>{
+      if(t.status==='in progress')grps.inprog++;
+      else if(t.status==='pending for testing')grps.pft++;
+      else if(['uat','release to uat','live'].includes(t.status))grps.done++;
+      else grps.todo++;
+    });
+    const n=tasks.length||1;
+    return`<div class="proj-health-row">
+      <div class="proj-dot" style="background:${p.color}"></div>
+      <div class="proj-name">${esc(p.name)}</div>
+      <div class="proj-stack">
+        <div class="proj-stack-seg" style="width:${Math.round(grps.inprog/n*100)}%;background:#8b5cf6"></div>
+        <div class="proj-stack-seg" style="width:${Math.round(grps.pft/n*100)}%;background:#f59e0b"></div>
+        <div class="proj-stack-seg" style="width:${Math.round(grps.done/n*100)}%;background:#10b981"></div>
+        <div class="proj-stack-seg" style="width:${Math.round(grps.todo/n*100)}%;background:#334155"></div>
+      </div>
+      <div class="proj-total">${tasks.length}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCompletionChart(){
+  const done=(G.statusCounts['live']||0)+(G.statusCounts['uat']||0)+(G.statusCounts['release to uat']||0);
+  const active=G.statusCounts['in progress']||0;
+  const pending=(G.statusCounts['pending for testing']||0);
+  const todo=G.statusCounts['to do']||0;
+  const other=G.tasks.length-done-active-pending-todo;
+  const vals=[done,active,pending,todo];
+  const lbls=['Completed','In Progress','Pending Test','To Do'];
+  const cols=['#10b981','#8b5cf6','#f59e0b','#334155'];
+  destroyChart('completionChart');
+  const ctx=$('completionChart').getContext('2d');
+  charts['completionChart']=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:lbls,datasets:[{data:vals,backgroundColor:cols.map(c=>rgba(c,.8)),borderColor:cols,borderWidth:1.5,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1}}}
+  });
+  const total=G.tasks.length||1;
+  $('completion-legend').innerHTML=vals.map((v,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+      <div style="width:8px;height:8px;border-radius:2px;background:${cols[i]}"></div>
+      <span style="font-size:11px;color:var(--text2);flex:1;font-family:var(--mono)">${lbls[i]}</span>
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${v} · ${Math.round(v/total*100)}%</span>
+    </div>`).join('');
+}
+
+function renderWorkloadChart(){
+  const sorted=Object.entries(G.acm).sort((a,b)=>b[1]-a[1]);
+  const labels=sorted.map(([n])=>n);
+  const values=sorted.map(([,c])=>c);
+  const colors=sorted.map(([,],i)=>PAL[i%PAL.length]);
+  destroyChart('workloadChart');
+  const ctx=$('workloadChart').getContext('2d');
+  charts['workloadChart']=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{data:values,backgroundColor:colors.map(c=>rgba(c,.75)),borderColor:colors,borderWidth:1.5,borderRadius:4}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5568',font:{family:'IBM Plex Mono',size:9}}},
+        y:{grid:{display:false},ticks:{color:'#94a3b8',font:{family:'IBM Plex Mono',size:10}}}
+      }
+    }
+  });
+}
+
+function renderPieChart(){
+  const sorted=Object.entries(G.acm).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((s,[,v])=>s+v,0);
+  const labels=sorted.map(([n])=>n);
+  const values=sorted.map(([,v])=>v);
+  const colors=sorted.map((_,i)=>PAL[i%PAL.length]);
+  destroyChart('pieChart');
+  const ctx=$('pieChart').getContext('2d');
+  charts['pieChart']=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data:values,backgroundColor:colors.map(c=>rgba(c,.85)),borderColor:colors,borderWidth:1.5,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,callbacks:{label:ctx=>{return ` ${ctx.parsed} tasks · ${total?Math.round(ctx.parsed/total*100):0}%`;}}}}}
+  });
+  $('pie-legend').innerHTML=sorted.map(([n,v],i)=>`
+    <div class="legend-row">
+      <div class="legend-dot" style="background:${colors[i]}"></div>
+      <span class="legend-name">${esc(n)}</span>
+      <span class="legend-val">${v}</span>
+      <span class="legend-pct">${total?Math.round(v/total*100):0}%</span>
+    </div>`).join('');
+}
+
+function renderAssigneeCards(){
+  const sorted=Object.entries(G.acm).sort((a,b)=>b[1]-a[1]);
+  $('asgn-cards').innerHTML=sorted.map(([name,total],i)=>{
+    const d=G.assigneeDetail[name]||{};
+    const color=PAL[i%PAL.length];
+    const inprog=d.statuses?.['in progress']||0;
+    const live=(d.statuses?.['live']||0)+(d.statuses?.['uat']||0)+(d.statuses?.['release to uat']||0);
+    const todo=d.statuses?.['to do']||0;
+    const urg=d.priorities?.['urgent']||0;
+    const high=d.priorities?.['high']||0;
+    const compPct=total?Math.round(live/total*100):0;
+    const topProj=Object.entries(d.projects||{}).sort((a,b)=>b[1]-a[1])[0];
+    return`<div class="asgn-card">
+      <div class="asgn-header">
+        <div class="asgn-avatar" style="background:${rgba(color,.15)};color:${color}">${ini(name)}</div>
+        <div>
+          <div class="asgn-name">${esc(name)}</div>
+          <div class="asgn-count">${total} tasks · ${compPct}% complete</div>
+        </div>
+      </div>
+      <div class="asgn-stats">
+        <div class="asgn-stat">
+          <div class="asgn-stat-label">In progress</div>
+          <div class="asgn-stat-val" style="color:#a78bfa">${inprog}</div>
+          <div class="asgn-stat-bar"><div class="asgn-stat-bar-fill" style="width:${total?bw(inprog,total):0}%;background:#8b5cf6"></div></div>
+        </div>
+        <div class="asgn-stat">
+          <div class="asgn-stat-label">Completed</div>
+          <div class="asgn-stat-val" style="color:#34d399">${live}</div>
+          <div class="asgn-stat-bar"><div class="asgn-stat-bar-fill" style="width:${total?bw(live,total):0}%;background:#10b981"></div></div>
+        </div>
+        <div class="asgn-stat">
+          <div class="asgn-stat-label">Urgent</div>
+          <div class="asgn-stat-val" style="color:#fca5a5">${urg}</div>
+          <div class="asgn-stat-bar"><div class="asgn-stat-bar-fill" style="width:${total?bw(urg,total):0}%;background:#ef4444"></div></div>
+        </div>
+      </div>
+      ${topProj?`<div style="margin-top:10px;font-size:10px;color:var(--text3);font-family:var(--mono)">Top project: <span style="color:${color}">${esc(topProj[0])}</span> (${topProj[1]})</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+function buildFilters(){
+  // project
+  const projNames=['All',...G.projects.map(p=>p.name)];
+  $('proj-filters').innerHTML=projNames.map(p=>`<button class="fbtn${p==='All'?' active':''}" onclick="setFilter('project',${JSON.stringify(p)})">${p==='All'?'All':esc(p)}</button>`).join('');
+
+  // status
+  const statuses=['All',...Object.keys(G.statusCounts).sort()];
+  $('status-filters').innerHTML=statuses.map(s=>`<button class="fbtn${s==='All'?' active':''}" onclick="setFilter('status',${JSON.stringify(s)})">${s==='All'?'All':statusLabel(s)}</button>`).join('');
+
+  // priority
+  const prios=['All','urgent','high','normal','low','none'];
+  $('prio-filters').innerHTML=prios.filter(p=>p==='All'||G.priorityCounts[p]).map(p=>`<button class="fbtn${p==='All'?' active':''}" onclick="setFilter('priority',${JSON.stringify(p)})">${p==='All'?'All':p.charAt(0).toUpperCase()+p.slice(1)}</button>`).join('');
+}
+
+window.setFilter=function(type,val){
+  F[type]=val;
+  PAGE=0;
+  // update button states
+  const groupMap={project:'proj-filters',status:'status-filters',priority:'prio-filters'};
+  const container=$(groupMap[type]);
+  if(container){
+    container.querySelectorAll('.fbtn').forEach(b=>{
+      const bval=b.textContent==='All'?'All':b.getAttribute('onclick').match(/"([^"]+)"/)?.[1]||b.textContent;
+      // use data matching
+      b.classList.toggle('active', b.onclick.toString().includes(JSON.stringify(val)));
+    });
+  }
+  applyFilters();
+};
+
+// Fix: rebuild filter buttons correctly on click
+window.setFilter=function(type,val){
+  F[type]=val;PAGE=0;
+  const maps={project:'proj-filters',status:'status-filters',priority:'prio-filters'};
+  Object.entries(maps).forEach(([ftype,cid])=>{
+    const c=$(cid);if(!c)return;
+    c.querySelectorAll('.fbtn').forEach(btn=>{
+      const onc=btn.getAttribute('onclick')||'';
+      const m=onc.match(/"([^"]*)"/);
+      const bval=m?m[1]:'All';
+      const isAll=bval===''||btn.textContent==='All';
+      const activeVal=ftype===type?val:F[ftype];
+      btn.classList.toggle('active', isAll?(activeVal==='All'):(bval===activeVal));
+    });
+  });
+  applyFilters();
+};
+
+let _sortDir={name:1,list:1,status:1,priority:1,due:1};
+window.sortTable=function(col){
+  if(F.sort===col)_sortDir[col]*=-1; else _sortDir[col]=1;
+  F.sort=col;F.dir=_sortDir[col];PAGE=0;
+  ['name','list','status','priority','due'].forEach(c=>{
+    const el=$('sort-'+c);if(el)el.textContent=c===col?(F.dir===1?'↑':'↓'):'↕';
+    const th=el?.closest('th');if(th)th.classList.toggle('sorted',c===col);
+  });
+  renderTable(getFiltered());
+};
+
+function getFiltered(){
+  let tasks=[...G.tasks];
+  if(F.project!=='All')tasks=tasks.filter(t=>t.list===F.project);
+  if(F.status!=='All')tasks=tasks.filter(t=>t.status===F.status);
+  if(F.priority!=='All')tasks=tasks.filter(t=>(t.priority||'none')===F.priority);
+  const q=($('task-search')?.value||'').toLowerCase().trim();
+  if(q)tasks=tasks.filter(t=>t.name.toLowerCase().includes(q)||t.list.toLowerCase().includes(q)||(t.assignees||[]).some(a=>a.toLowerCase().includes(q)));
+  // sort
+  tasks.sort((a,b)=>{
+    let av,bv;
+    if(F.sort==='name'){av=a.name.toLowerCase();bv=b.name.toLowerCase();}
+    else if(F.sort==='list'){av=a.list.toLowerCase();bv=b.list.toLowerCase();}
+    else if(F.sort==='status'){av=a.status||'';bv=b.status||'';}
+    else if(F.sort==='priority'){const o={urgent:0,high:1,normal:2,low:3,none:4};av=o[a.priority||'none']??4;bv=o[b.priority||'none']??4;}
+    else if(F.sort==='due'){av=Number(a.due_date||9e15);bv=Number(b.due_date||9e15);}
+    if(av<bv)return-F.dir;if(av>bv)return F.dir;return 0;
+  });
+  return tasks;
+}
+
+function applyFilters(){
+  const filtered=getFiltered();
+  $('task-count-label').textContent=`${filtered.length} task${filtered.length!==1?'s':''}`;
+  renderTable(filtered);
+}
+
+function renderTable(tasks){
+  const start=PAGE*PAGE_SIZE,end=start+PAGE_SIZE;
+  const page=tasks.slice(start,end);
+  const projColorMap={};G.projects.forEach(p=>{projColorMap[p.name]=p.color});
+  const assigneeColors={};Object.keys(G.acm).forEach((n,i)=>{assigneeColors[n]=PAL[i%PAL.length]});
+  const now=Date.now();
+
+  $('task-tbody').innerHTML=page.length?page.map(t=>{
+    const pc=projColorMap[t.list]||'#4a5568';
+    const due=t.due_date?formatDate(t.due_date):'—';
+    const over=isOverdue(t.due_date)&&t.status!=='live';
+    const asgns=(t.assignees||[]).map(a=>`<div class="mini-av" title="${esc(a)}" style="background:${rgba(assigneeColors[a]||'#888',.18)};color:${assigneeColors[a]||'#888'}">${ini(a)}</div>`).join('');
+    return`<tr>
+      <td class="td-name"><span class="task-name-text" title="${esc(t.name)}">${esc(t.name)}</span></td>
+      <td><div class="td-list"><span class="td-list-dot" style="background:${pc}"></span>${esc(t.list)}</div></td>
+      <td><span class="badge ${scls(t.status)}">${statusLabel(t.status)}</span></td>
+      <td>${t.priority?`<div style="display:flex;align-items:center;gap:5px"><span class="pdot ${pdcls(t.priority)}"></span><span class="badge ${pcls(t.priority)}">${t.priority}</span></div>`:`<span style="color:var(--text3);font-size:11px;font-family:var(--mono)">—</span>`}</td>
+      <td><div class="td-asgn">${asgns||`<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">unassigned</span>`}</div></td>
+      <td><span class="td-due${over?' overdue':''}">${due}${over?' ⚠':''}</span></td>
+      <td>${t.url?`<a href="${t.url}" target="_blank" class="td-link">↗</a>`:''}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="7"><div class="empty">No tasks match the current filters.</div></td></tr>`;
+
+  // pagination
+  const totalPages=Math.ceil(tasks.length/PAGE_SIZE);
+  $('tbl-info').textContent=`Showing ${Math.min(start+1,tasks.length)}–${Math.min(end,tasks.length)} of ${tasks.length}`;
+  const pb=$('page-btns');pb.innerHTML='';
+  if(totalPages>1){
+    const addBtn=(label,pg,disabled=false)=>{
+      const b=document.createElement('button');b.className='page-btn';
+      if(pg===PAGE)b.classList.add('active');
+      b.textContent=label;b.disabled=disabled;
+      b.onclick=()=>{PAGE=pg;renderTable(tasks);};
+      pb.appendChild(b);
+    };
+    addBtn('←',PAGE-1,PAGE===0);
+    const range=[];
+    for(let i=0;i<totalPages;i++){if(i===0||i===totalPages-1||Math.abs(i-PAGE)<=1)range.push(i);}
+    let prev=-1;
+    range.forEach(i=>{if(prev!==-1&&i-prev>1)pb.appendChild(Object.assign(document.createElement('span'),{textContent:'…',style:'color:var(--text3);padding:0 4px;font-size:11px'}));addBtn(i+1,i);prev=i;});
+    addBtn('→',PAGE+1,PAGE>=totalPages-1);
+  }
+}
+
+// make applyFilters available globally
+window.applyFilters=applyFilters;
+</script>
+</body>
+</html>
