@@ -45,7 +45,8 @@
   .mv{font-size:26px;font-weight:700;font-family:var(--font);color:var(--text)}
   .mv.u{color:var(--danger)}.mv.l{color:var(--success)}.mv.i{color:var(--accent2)}.mv.w{color:var(--warning)}
   .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
-  @media(max-width:680px){.cgrid{grid-template-columns:1fr}}
+  .cgrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
+  @media(max-width:780px){.cgrid,.cgrid3{grid-template-columns:1fr}}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.2rem}
   .ct{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
   .br{display:flex;align-items:center;gap:7px;margin-bottom:8px}
@@ -59,7 +60,7 @@
   .s4{background:rgba(96,165,250,.1);color:var(--info)}.s5{background:rgba(52,211,153,.18);color:var(--success)}
   .pdot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
   .pu{background:var(--danger)}.ph{background:var(--warning)}.pn{background:var(--info)}.pl{background:var(--muted)}.pp{background:rgba(255,255,255,.12)}
-  .av{width:26px;height:26px;border-radius:50%;background:rgba(124,106,247,.2);color:var(--accent2);font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
   .arow{display:flex;align-items:center;gap:7px;margin-bottom:7px}.an{font-size:11px;color:var(--text);flex:1}
   .srow{display:flex;align-items:center;gap:7px;margin-bottom:7px}
   .frow{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
@@ -69,11 +70,32 @@
   .ttable th{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:0 8px 8px 0;text-align:left;border-bottom:1px solid var(--border)}
   .ttable td{font-size:11px;padding:8px 8px 8px 0;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
   .ttable tr:last-child td{border-bottom:none}.ttable tr:hover td{background:rgba(255,255,255,.02)}
-  .tn{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+  .tn{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
   .pt{font-size:9px;background:var(--surface2);color:var(--muted);padding:2px 6px;border-radius:5px;white-space:nowrap}
   .tl{color:var(--muted);text-decoration:none;font-size:11px}.tl:hover{color:var(--accent2)}
+
+  /* pie chart */
+  .pie-wrap{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}
+  .pie-legend{flex:1;min-width:140px}
+  .legend-item{display:flex;align-items:center;gap:7px;margin-bottom:7px;cursor:pointer}
+  .legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .legend-name{font-size:11px;color:var(--text);flex:1}
+  .legend-pct{font-size:11px;color:var(--muted);font-family:var(--mono)}
+
+  /* assignee detail cards */
+  .assignee-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+  .acard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem}
+  .acard-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .acard-name{font-size:13px;font-weight:600;font-family:var(--font);color:var(--text)}
+  .acard-total{font-size:11px;color:var(--muted)}
+  .acard-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .astat{background:var(--surface2);border-radius:6px;padding:6px 8px}
+  .astat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+  .astat-val{font-size:14px;font-weight:600;font-family:var(--font)}
+
   @keyframes spin{to{transform:rotate(360deg)}}
   .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  .section-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.5rem 0 .75rem}
 </style>
 </head>
 <body>
@@ -85,23 +107,18 @@
 
 <div id="setup" class="setup">
   <h1>ClickUp Dashboard<br>Generator</h1>
-  <p class="sub">// free · no AI needed · uses ClickUp API directly</p>
-
+  <p class="sub">// free · uses ClickUp API directly</p>
   <div class="field">
     <label>ClickUp API Token</label>
     <input type="password" id="ikey" placeholder="pk_123456_XXXXXXXXXX"/>
-    <p class="hint">Get it free: ClickUp → Settings → Apps → API Token. Saved locally in your browser.</p>
+    <p class="hint">ClickUp → Settings → Apps → API Token. Saved in browser.</p>
   </div>
-
   <div class="field">
     <label>ClickUp Space URL</label>
     <input type="url" id="iurl" placeholder="https://app.clickup.com/90161601633/v/s/90166936041"/>
-    <p class="hint">Copy URL directly from your ClickUp space.</p>
   </div>
-
   <button class="btn" id="gbtn" onclick="generate()">
-    <span id="gicon">⚡</span>
-    <span id="gtxt">Generate Dashboard</span>
+    <span id="gicon">⚡</span><span id="gtxt">Generate Dashboard</span>
   </button>
   <div id="ebox"></div>
 </div>
@@ -109,19 +126,20 @@
 <div id="prog-wrap"><div class="prog-inner" id="plog"></div></div>
 <div id="dash"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const PC=['#7c6af7','#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c'];
-const PRIO_COLORS={urgent:'#f87171',high:'#fbbf24',normal:'#60a5fa',low:'#6b6b80'};
+const PC=['#7c6af7','#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9','#4ade80','#f97316','#22d3ee'];
+const SC={s0:'#4b4b5e',s1:'#7c6af7',s2:'#fbbf24',s3:'#34d399',s4:'#60a5fa',s5:'#34d399'};
 
 function parseURL(u){const m=u.match(/app\.clickup\.com\/(\d+)\/v\/[sl]\/(\d+)/);return m?{w:m[1],s:m[2]}:null}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function ini(n){return(n||'?').split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)}
 function bw(v,m){return m?Math.max(4,Math.round(v/m*100)):0}
-function ts(){return new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function log(msg,cls=''){
   const w=document.getElementById('prog-wrap'),l=document.getElementById('plog');
   w.style.display='block';const d=document.createElement('div');d.className='ll '+cls;
-  d.textContent=`[${ts()}] ${msg}`;l.appendChild(d);l.scrollTop=l.scrollHeight;
+  const t=new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent=`[${t}] ${msg}`;l.appendChild(d);l.scrollTop=l.scrollHeight;
 }
 function setLoading(on){
   const b=document.getElementById('gbtn'),i=document.getElementById('gicon'),t=document.getElementById('gtxt');
@@ -130,7 +148,8 @@ function setLoading(on){
 function showErr(m){document.getElementById('ebox').innerHTML=`<div class="err">${m}</div>`}
 function scls(s){return{'to do':'s0','in progress':'s1','pending for testing':'s2','uat':'s3','release to uat':'s4','live':'s5'}[(s||'').toLowerCase()]||'s0'}
 function pcls(p){return{urgent:'pu',high:'ph',normal:'pn',low:'pl'}[p]||'pp'}
-function prioLabel(p){const m={1:'urgent',2:'high',3:'normal',4:'low'};return m[p]||null}
+function prioLabel(p){return{1:'urgent',2:'high',3:'normal',4:'low'}[p]||null}
+function hex2rgba(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`}
 
 window.addEventListener('DOMContentLoaded',()=>{
   const k=localStorage.getItem('cu_key')||'';
@@ -139,110 +158,90 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(u)document.getElementById('iurl').value=u;
 });
 
-async function cuFetch(token, path){
-  const res = await fetch(`https://api.clickup.com/api/v2${path}`,{
-    headers:{'Authorization': token}
-  });
-  if(!res.ok){
-    const e=await res.json().catch(()=>({}));
-    throw new Error(e.err||e.error||`ClickUp API error ${res.status}`);
-  }
+async function cuFetch(token,path){
+  const res=await fetch(`https://api.clickup.com/api/v2${path}`,{headers:{'Authorization':token}});
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.err||e.error||`ClickUp error ${res.status}`);}
   return res.json();
 }
 
 async function generate(){
   document.getElementById('ebox').innerHTML='';
   document.getElementById('plog').innerHTML='';
-
-  const token = document.getElementById('ikey').value.trim();
-  const rawUrl = document.getElementById('iurl').value.trim();
-
-  if(!token) return showErr('Enter your ClickUp API token.');
-  if(!rawUrl) return showErr('Enter your ClickUp space URL.');
-  const ids = parseURL(rawUrl);
-  if(!ids) return showErr('URL not recognised. Need: https://app.clickup.com/{workspace}/v/s/{space}');
-
-  localStorage.setItem('cu_key', token);
-  localStorage.setItem('cu_url', rawUrl);
-
+  const token=document.getElementById('ikey').value.trim();
+  const rawUrl=document.getElementById('iurl').value.trim();
+  if(!token)return showErr('Enter your ClickUp API token.');
+  if(!rawUrl)return showErr('Enter your ClickUp space URL.');
+  const ids=parseURL(rawUrl);
+  if(!ids)return showErr('URL not recognised.');
+  localStorage.setItem('cu_key',token);
+  localStorage.setItem('cu_url',rawUrl);
   setLoading(true);
   document.getElementById('prog-wrap').style.display='block';
   document.getElementById('dash').style.display='none';
-
-  try {
-    log(`Fetching space info…`, 'sp');
-    const spaceData = await cuFetch(token, `/space/${ids.s}`);
-    const spaceName = spaceData.name || 'Dashboard';
-    log(`Space: ${spaceName}`, 'ok');
-
-    log('Fetching lists…', 'sp');
-    const listsData = await cuFetch(token, `/space/${ids.s}/list?archived=false`);
-    const lists = listsData.lists || [];
-    log(`Found ${lists.length} lists`, 'ok');
-
-    // Also fetch lists inside folders
-    log('Fetching folders…', 'sp');
-    const foldersData = await cuFetch(token, `/space/${ids.s}/folder?archived=false`);
-    const folders = foldersData.folders || [];
-    for(const folder of folders){
-      const fl = await cuFetch(token, `/folder/${folder.id}/list?archived=false`);
-      if(fl.lists) lists.push(...fl.lists);
+  // destroy old chart
+  if(window._pieChart){window._pieChart.destroy();window._pieChart=null;}
+  try{
+    log('Fetching space…','sp');
+    const spaceData=await cuFetch(token,`/space/${ids.s}`);
+    const spaceName=spaceData.name||'Dashboard';
+    log(`Space: ${spaceName}`,'ok');
+    log('Fetching lists…','sp');
+    const listsData=await cuFetch(token,`/space/${ids.s}/list?archived=false`);
+    const lists=listsData.lists||[];
+    const foldersData=await cuFetch(token,`/space/${ids.s}/folder?archived=false`);
+    for(const f of foldersData.folders||[]){
+      const fl=await cuFetch(token,`/folder/${f.id}/list?archived=false`);
+      if(fl.lists)lists.push(...fl.lists);
     }
-    log(`Total lists: ${lists.length}`, 'ok');
-
-    // Fetch tasks from all lists
-    let allTasks = [];
+    log(`${lists.length} lists found`,'ok');
+    let allTasks=[];
     for(const list of lists){
-      log(`Fetching tasks from "${list.name}"…`, 'sp');
-      let page = 0;
+      log(`Tasks from "${list.name}"…`,'sp');
+      let page=0;
       while(true){
-        const td = await cuFetch(token, `/list/${list.id}/task?include_closed=true&subtasks=true&page=${page}`);
-        const tasks = td.tasks || [];
-        allTasks.push(...tasks.map(t => ({
-          id: t.id,
-          name: t.name,
-          status: t.status?.status || '',
-          priority: prioLabel(t.priority?.priority),
-          list: list.name,
-          url: t.url,
-          due_date: t.due_date,
-          assignees: (t.assignees||[]).map(a=>a.username||a.email).filter(Boolean)
+        const td=await cuFetch(token,`/list/${list.id}/task?include_closed=true&subtasks=true&page=${page}`);
+        const tasks=td.tasks||[];
+        allTasks.push(...tasks.map(t=>({
+          id:t.id,name:t.name,
+          status:(t.status?.status||'').toLowerCase(),
+          priority:prioLabel(t.priority?.priority),
+          list:list.name,url:t.url,
+          assignees:(t.assignees||[]).map(a=>a.username||a.email).filter(Boolean)
         })));
-        if(tasks.length < 100) break;
+        if(tasks.length<100)break;
         page++;
       }
     }
-    log(`Total tasks: ${allTasks.length}`, 'ok');
+    log(`${allTasks.length} tasks total`,'ok');
 
-    // Build aggregates
-    const projects = lists.map(l=>({
-      name: l.name,
-      taskCount: allTasks.filter(t=>t.list===l.name).length
-    })).filter(p=>p.taskCount>0);
+    // aggregates
+    const projects=lists.map(l=>({name:l.name,taskCount:allTasks.filter(t=>t.list===l.name).length})).filter(p=>p.taskCount>0);
+    const statusCounts={},priorityCounts={},assigneeCounts={};
+    // per-assignee breakdown: {name: {total, statuses:{}, priorities:{}}}
+    const assigneeDetail={};
 
-    const statusCounts={}, priorityCounts={}, assigneeCounts={};
     for(const t of allTasks){
-      const s=(t.status||'').toLowerCase();
-      statusCounts[s]=(statusCounts[s]||0)+1;
+      statusCounts[t.status]=(statusCounts[t.status]||0)+1;
       const p=t.priority||'none';
       priorityCounts[p]=(priorityCounts[p]||0)+1;
-      for(const a of t.assignees) assigneeCounts[a]=(assigneeCounts[a]||0)+1;
+      for(const a of t.assignees){
+        assigneeCounts[a]=(assigneeCounts[a]||0)+1;
+        if(!assigneeDetail[a])assigneeDetail[a]={total:0,statuses:{},priorities:{}};
+        assigneeDetail[a].total++;
+        assigneeDetail[a].statuses[t.status]=(assigneeDetail[a].statuses[t.status]||0)+1;
+        assigneeDetail[a].priorities[p]=(assigneeDetail[a].priorities[p]||0)+1;
+      }
     }
 
-    log('Rendering dashboard…', 'sp');
-    render({spaceName, projects, tasks:allTasks, statusCounts, priorityCounts, assigneeCounts}, ids);
-    log('Done!', 'ok');
+    log('Rendering…','sp');
+    render({spaceName,projects,tasks:allTasks,statusCounts,priorityCounts,assigneeCounts,assigneeDetail},ids);
+    log('Done!','ok');
     setTimeout(()=>{document.getElementById('prog-wrap').style.display='none'},1200);
-
-  } catch(e){
-    log('Error: '+e.message, 'er');
-    showErr(e.message);
-  } finally {
-    setLoading(false);
-  }
+  }catch(e){log('Error: '+e.message,'er');showErr(e.message);}
+  finally{setLoading(false);}
 }
 
-function render(data, ids){
+function render(data,ids){
   const total=data.tasks.length;
   const urgent=data.priorityCounts?.urgent||0;
   const inprog=data.statusCounts?.['in progress']||0;
@@ -250,32 +249,77 @@ function render(data, ids){
   const pft=data.statusCounts?.['pending for testing']||0;
   const cm={};(data.projects||[]).forEach((p,i)=>{cm[p.name]=PC[i%PC.length]});
 
+  // assignee colors
+  const assigneeNames=Object.keys(data.assigneeCounts||{}).sort((a,b)=>data.assigneeCounts[b]-data.assigneeCounts[a]);
+  const acm={};assigneeNames.forEach((n,i)=>{acm[n]=PC[i%PC.length]});
+
+  // project bars
   const maxP=Math.max(...(data.projects||[]).map(p=>p.taskCount),1);
   const projB=(data.projects||[]).sort((a,b)=>b.taskCount-a.taskCount).map(p=>
     `<div class="br"><span class="bl" title="${esc(p.name)}">${esc(p.name)}</span><div class="bt"><div class="bf" style="width:${bw(p.taskCount,maxP)}%;background:${cm[p.name]||'#7c6af7'}"></div></div><span class="bc">${p.taskCount}</span></div>`).join('');
 
+  // status bars
   const sord=[['to do','To do'],['in progress','In progress'],['pending for testing','Pending test'],['uat','UAT'],['release to uat','Release to UAT'],['live','Live']];
-  const SC={s0:'#4b4b5e',s1:'#7c6af7',s2:'#fbbf24',s3:'#34d399',s4:'#60a5fa',s5:'#34d399'};
   const maxS=Math.max(...sord.map(([k])=>data.statusCounts?.[k]||0),1);
   const statB=sord.map(([k,l])=>{const c=data.statusCounts?.[k]||0;if(!c)return'';const sc=scls(k);return`<div class="srow"><span class="badge ${sc}">${l}</span><div class="bt" style="flex:1"><div class="bf" style="width:${bw(c,maxS)}%;background:${SC[sc]||'#888'}"></div></div><span style="font-size:11px;color:var(--muted);min-width:24px;text-align:right">${c}</span></div>`}).join('');
 
+  // priority bars
   const pord=[{k:'urgent',l:'Urgent',c:'#f87171'},{k:'high',l:'High',c:'#fbbf24'},{k:'normal',l:'Normal',c:'#60a5fa'},{k:'low',l:'Low',c:'#6b6b80'},{k:'none',l:'None',c:'#2a2a35'}];
   const maxR=Math.max(...pord.map(p=>data.priorityCounts?.[p.k]||0),1);
   const prioB=pord.map(p=>{const c=data.priorityCounts?.[p.k]||0;if(!c)return'';return`<div class="br"><span class="bl">${p.l}</span><div class="bt"><div class="bf" style="width:${bw(c,maxR)}%;background:${p.c}"></div></div><span class="bc">${c}</span></div>`}).join('');
 
-  const maxA=Math.max(...Object.values(data.assigneeCounts||{}),1);
-  const assH=Object.entries(data.assigneeCounts||{}).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n,c])=>
-    `<div class="arow"><div class="av">${ini(n)}</div><span class="an">${esc(n)}</span><div class="bt" style="width:60px"><div class="bf" style="width:${bw(c,maxA)}%;background:var(--accent)"></div></div><span style="font-size:11px;color:var(--muted)">${c}</span></div>`).join('');
+  // pie legend
+  const pieTotal=assigneeNames.reduce((s,n)=>s+(data.assigneeCounts[n]||0),0);
+  const pieLegend=assigneeNames.map(n=>{
+    const cnt=data.assigneeCounts[n]||0;
+    const pct=pieTotal?Math.round(cnt/pieTotal*100):0;
+    return`<div class="legend-item"><div class="legend-dot" style="background:${acm[n]}"></div><span class="legend-name">${esc(n)}</span><span class="legend-pct">${cnt} · ${pct}%</span></div>`;
+  }).join('');
 
+  // assignee detail cards
+  const aCards=assigneeNames.map(n=>{
+    const d=data.assigneeDetail[n]||{total:0,statuses:{},priorities:{}};
+    const color=acm[n];
+    const inP=d.statuses['in progress']||0;
+    const lv=d.statuses['live']||0;
+    const td=d.statuses['to do']||0;
+    const urg=d.priorities['urgent']||0;
+    return`<div class="acard">
+      <div class="acard-header">
+        <div class="av" style="background:${hex2rgba(color,0.2)};color:${color}">${ini(n)}</div>
+        <div><div class="acard-name">${esc(n)}</div><div class="acard-total">${d.total} task${d.total!==1?'s':''}</div></div>
+      </div>
+      <div class="acard-stats">
+        <div class="astat"><div class="astat-label">In progress</div><div class="astat-val" style="color:var(--accent2)">${inP}</div></div>
+        <div class="astat"><div class="astat-label">Live</div><div class="astat-val" style="color:var(--success)">${lv}</div></div>
+        <div class="astat"><div class="astat-label">To do</div><div class="astat-val" style="color:var(--muted)">${td}</div></div>
+        <div class="astat"><div class="astat-label">Urgent</div><div class="astat-val" style="color:var(--danger)">${urg}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // task table filters
   const projs=['All',...(data.projects||[]).map(p=>p.name)];
   const fbtns=projs.map(p=>`<button class="fb${p==='All'?' active':''}" onclick="ft(${JSON.stringify(p)})">${p==='All'?'All':esc(p)}</button>`).join('');
 
-  const trows=(data.tasks||[]).map(t=>{const pc=cm[t.list]||'#7c6af7';return`<tr data-p="${esc(t.list||'')}"><td><span class="tn" title="${esc(t.name)}">${esc(t.name)}</span></td><td><span class="pt" style="border-left:2px solid ${pc};padding-left:5px">${esc(t.list||'')}</span></td><td><span class="badge ${scls(t.status||'')}">${esc(t.status||'')}</span></td><td><div style="display:flex;align-items:center;gap:4px"><span class="pdot ${pcls(t.priority)}"></span><span style="font-size:10px;color:var(--muted)">${t.priority||'—'}</span></div></td><td>${t.url?`<a href="${t.url}" target="_blank" class="tl">↗</a>`:''}</td></tr>`}).join('');
+  const trows=(data.tasks||[]).map(t=>{
+    const pc=cm[t.list]||'#7c6af7';
+    const assigneeBadges=(t.assignees||[]).map(a=>`<span style="font-size:9px;background:${hex2rgba(acm[a]||'#888',.15)};color:${acm[a]||'#888'};padding:1px 5px;border-radius:10px;margin-right:2px">${esc(a)}</span>`).join('');
+    return`<tr data-p="${esc(t.list||'')}">
+      <td><span class="tn" title="${esc(t.name)}">${esc(t.name)}</span></td>
+      <td><span class="pt" style="border-left:2px solid ${pc};padding-left:5px">${esc(t.list||'')}</span></td>
+      <td><span class="badge ${scls(t.status||'')}">${esc(t.status||'')}</span></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><span class="pdot ${pcls(t.priority)}"></span><span style="font-size:10px;color:var(--muted)">${t.priority||'—'}</span></div></td>
+      <td>${assigneeBadges}</td>
+      <td>${t.url?`<a href="${t.url}" target="_blank" class="tl">↗</a>`:''}</td>
+    </tr>`;
+  }).join('');
 
   const now=new Date().toLocaleString();
   const el=document.getElementById('dash');
   el.innerHTML=`
 <div class="dh"><div><div class="dt">${esc(data.spaceName||'Dashboard')}</div><div class="dm">Generated ${now} · ${total} tasks</div></div><button class="rbtn" onclick="generate()">↻ Refresh</button></div>
+
 <div class="mrow">
   <div class="mc"><div class="ml">Total</div><div class="mv">${total}</div></div>
   <div class="mc"><div class="ml">Urgent</div><div class="mv u">${urgent}</div></div>
@@ -283,17 +327,78 @@ function render(data, ids){
   <div class="mc"><div class="ml">Live</div><div class="mv l">${live}</div></div>
   <div class="mc"><div class="ml">Pending test</div><div class="mv w">${pft}</div></div>
 </div>
+
 <div class="cgrid">
   <div class="card"><div class="ct">By project</div>${projB||'—'}</div>
-  <div class="card"><div class="ct">Status</div>${statB||'—'}</div>
-  <div class="card"><div class="ct">Priority</div>${prioB||'—'}</div>
-  <div class="card"><div class="ct">Assignees</div>${assH||'—'}</div>
+  <div class="card"><div class="ct">Status breakdown</div>${statB||'—'}</div>
 </div>
-<div class="card"><div class="ct">Tasks</div><div class="frow">${fbtns}</div>
-<table class="ttable"><thead><tr><th>Task</th><th>Project</th><th>Status</th><th>Priority</th><th></th></tr></thead><tbody id="tb">${trows}</tbody></table></div>`;
+
+<div class="cgrid">
+  <div class="card"><div class="ct">Priority breakdown</div>${prioB||'—'}</div>
+  <div class="card">
+    <div class="ct">Assignee share</div>
+    <div class="pie-wrap">
+      <div style="position:relative;width:180px;height:180px;flex-shrink:0">
+        <canvas id="pieChart" role="img" aria-label="Assignee task share pie chart"></canvas>
+      </div>
+      <div class="pie-legend">${pieLegend}</div>
+    </div>
+  </div>
+</div>
+
+<p class="section-label">Assignee breakdown</p>
+<div class="assignee-grid">${aCards||'<span style="color:var(--muted);font-size:12px">No assignees found</span>'}</div>
+
+<div class="card"><div class="ct">All tasks</div>
+<div class="frow">${fbtns}</div>
+<table class="ttable">
+  <thead><tr><th>Task</th><th>Project</th><th>Status</th><th>Priority</th><th>Assignees</th><th></th></tr></thead>
+  <tbody id="tb">${trows}</tbody>
+</table></div>`;
+
   el.style.display='block';
   document.getElementById('hmeta').textContent=data.spaceName||'';
   window._rows=[...document.querySelectorAll('#tb tr')];
+
+  // draw pie chart
+  const ctx=document.getElementById('pieChart').getContext('2d');
+  window._pieChart=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:assigneeNames,
+      datasets:[{
+        data:assigneeNames.map(n=>data.assigneeCounts[n]||0),
+        backgroundColor:assigneeNames.map(n=>hex2rgba(acm[n],.85)),
+        borderColor:assigneeNames.map(n=>acm[n]),
+        borderWidth:1.5,
+        hoverOffset:6
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      cutout:'62%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:ctx=>{
+              const val=ctx.parsed;
+              const pct=pieTotal?Math.round(val/pieTotal*100):0;
+              return ` ${val} tasks (${pct}%)`;
+            }
+          },
+          backgroundColor:'#1a1a24',
+          borderColor:'rgba(255,255,255,.1)',
+          borderWidth:1,
+          titleColor:'#e8e8f0',
+          bodyColor:'#a78bfa',
+          titleFont:{family:'Syne',size:12},
+          bodyFont:{family:'DM Mono',size:11}
+        }
+      }
+    }
+  });
 }
 
 window.ft=function(p){
