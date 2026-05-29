@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClickUp Dashboard Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --accent: #7c6af7;
+    --accent2: #a78bfa;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #60a5fa;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --font: 'Syne', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px; position: sticky; top: 0;
+    background: rgba(10,10,15,0.92); backdrop-filter: blur(12px); z-index: 100;
+  }
+  .logo { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+  .logo span { color: var(--accent2); }
+
+  .setup-wrap { max-width: 600px; margin: 5rem auto 0; padding: 0 1.5rem 4rem; }
+  .setup-headline { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 0.5rem; }
+  .setup-sub { color: var(--muted); font-size: 14px; margin-bottom: 2.5rem; font-family: var(--mono); }
+
+  .field { margin-bottom: 1.25rem; }
+  label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  input[type="url"], input[type="text"] {
+    width: 100%; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 12px 14px; font-size: 14px;
+    font-family: var(--mono); color: var(--text); outline: none; transition: border-color .15s;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 5px; font-family: var(--mono); }
+  .hint a { color: var(--accent2); text-decoration: none; }
+  .hint code { color: var(--accent2); }
+
+  .btn-generate {
+    width: 100%; padding: 14px; background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600;
+    font-family: var(--font); cursor: pointer; transition: opacity .15s, transform .1s;
+    margin-top: .5rem; display: flex; align-items: center; justify-content: center;
+    gap: 8px; letter-spacing: -0.01em;
+  }
+  .btn-generate:hover { opacity: .88; }
+  .btn-generate:active { transform: scale(.99); }
+  .btn-generate:disabled { opacity: .4; cursor: not-allowed; }
+
+  .error-banner {
+    background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.3);
+    border-radius: var(--radius); padding: 1rem 1.25rem; font-size: 13px;
+    color: var(--danger); font-family: var(--mono); margin-top: 1rem;
+  }
+
+  #progress-wrap { max-width: 600px; margin: 1.5rem auto 0; padding: 0 1.5rem; display: none; }
+  .progress-inner { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; max-height: 180px; overflow-y: auto; }
+  .log-line { font-family: var(--mono); font-size: 12px; color: var(--muted); padding: 3px 0; animation: fadein .2s ease; }
+  .log-line.ok   { color: var(--success); }
+  .log-line.spin { color: var(--accent2); }
+  .log-line.err  { color: var(--danger); }
+  @keyframes fadein { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: none; } }
+
+  /* ─── DASHBOARD ─── */
+  #dashboard { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; display: none; }
+
+  .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .dash-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .dash-meta { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+
+  .btn-refresh {
+    background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius);
+    color: var(--text); font-size: 13px; font-family: var(--font); padding: 8px 16px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: border-color .15s; font-weight: 500;
+  }
+  .btn-refresh:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+  .metric-label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+  .metric-val { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; color: var(--text); }
+  .metric-val.urgent { color: var(--danger); }
+  .metric-val.live   { color: var(--success); }
+  .metric-val.inprog { color: var(--accent2); }
+  .metric-val.warn   { color: var(--warning); }
+
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 700px) { .chart-grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .card-title { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .bar-label { font-size: 12px; color: var(--muted); width: 120px; flex-shrink: 0; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+  .bar-count { font-size: 12px; color: var(--muted); width: 24px; text-align: right; font-family: var(--mono); }
+
+  .badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; letter-spacing: .04em; text-transform: uppercase; font-family: var(--mono); white-space: nowrap; }
+  .s-todo  { background: rgba(255,255,255,.06); color: var(--muted); }
+  .s-ip    { background: rgba(124,106,247,.15); color: var(--accent2); }
+  .s-pft   { background: rgba(251,191,36,.1);   color: var(--warning); }
+  .s-uat   { background: rgba(52,211,153,.1);   color: var(--success); }
+  .s-ruat  { background: rgba(96,165,250,.1);   color: var(--info); }
+  .s-live  { background: rgba(52,211,153,.18);  color: var(--success); }
+  .s-other { background: rgba(255,255,255,.06); color: var(--muted); }
+
+  .pdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+  .p-urgent { background: var(--danger); }
+  .p-high   { background: var(--warning); }
+  .p-normal { background: var(--info); }
+  .p-low    { background: var(--muted); }
+  .p-none   { background: rgba(255,255,255,.12); }
+
+  .av { width: 28px; height: 28px; border-radius: 50%; background: rgba(124,106,247,.2); color: var(--accent2); font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .arow  { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .aname { font-size: 12px; color: var(--text); flex: 1; font-family: var(--mono); }
+  .acount{ font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .srow  { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+  .task-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .fbtn { font-size: 11px; font-family: var(--mono); padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .fbtn:hover { border-color: var(--accent); color: var(--accent2); }
+  .fbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .task-table { width: 100%; border-collapse: collapse; }
+  .task-table th { font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 0 10px 10px 0; text-align: left; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+  .task-table td { font-size: 12px; padding: 9px 10px 9px 0; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; font-family: var(--mono); }
+  .task-table tr:last-child td { border-bottom: none; }
+  .task-table tr:hover td { background: rgba(255,255,255,.02); }
+  .task-name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .proj-tag { font-size: 10px; background: var(--surface2); color: var(--muted); padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+  .task-link { color: var(--muted); text-decoration: none; font-size: 11px; }
+  .task-link:hover { color: var(--accent2); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <span class="logo">clickup<span>dash</span></span>
+  <span id="header-meta" style="font-size:12px;font-family:var(--mono);color:var(--muted)"></span>
+</header>
+
+<div id="setup-panel" class="setup-wrap">
+  <h1 class="setup-headline">ClickUp<br>Dashboard Generator</h1>
+  <p class="setup-sub">// paste space URL → generate instant dashboard</p>
+
+  <div class="field">
+    <label>ClickUp Space URL</label>
+    <input type="url" id="input-url" placeholder="https://app.clickup.com/90161601633/v/s/90166936041" />
+    <p class="hint">Workspace + space IDs extracted automatically from the URL.</p>
+  </div>
+
+  <button class="btn-generate" id="gen-btn" onclick="generate()">
+    <span id="gen-btn-icon">⚡</span>
+    <span id="gen-btn-text">Generate Dashboard</span>
+  </button>
+  <div id="error-box"></div>
+</div>
+
+<div id="progress-wrap">
+  <div class="progress-inner" id="progress-log"></div>
+</div>
+
+<div id="dashboard"></div>
+
+<script>
+// ── CONFIG — set this after deploying your Cloudflare Worker ──────────────────
+const WORKER_URL = 'https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev';
+// ─────────────────────────────────────────────────────────────────────────────
+
+function parseClickUpURL(url) {
+  const m = url.match(/app\.clickup\.com\/(\d+)\/v\/[sl]\/(\d+)/);
+  if (!m) return null;
+  return { workspaceId: m[1], spaceId: m[2] };
+}
+
+function log(msg, cls = '') {
+  const wrap = document.getElementById('progress-wrap');
+  const logEl = document.getElementById('progress-log');
+  wrap.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = 'log-line ' + cls;
+  const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  line.textContent = `[${ts}] ${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setGenerating(on) {
+  const btn  = document.getElementById('gen-btn');
+  const icon = document.getElementById('gen-btn-icon');
+  const txt  = document.getElementById('gen-btn-text');
+  btn.disabled = on;
+  icon.innerHTML = on ? '<span class="spinner"></span>' : '⚡';
+  txt.textContent = on ? 'Generating…' : 'Generate Dashboard';
+}
+
+function showError(msg) {
+  document.getElementById('error-box').innerHTML = `<div class="error-banner">${msg}</div>`;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('cu_dash_url') || '';
+  if (saved) document.getElementById('input-url').value = saved;
+});
+
+async function generate() {
+  document.getElementById('error-box').innerHTML = '';
+  document.getElementById('progress-log').innerHTML = '';
+
+  const rawUrl = document.getElementById('input-url').value.trim();
+  if (!rawUrl) return showError('Paste a ClickUp space URL first.');
+
+  const ids = parseClickUpURL(rawUrl);
+  if (!ids) return showError('URL format not recognised. Expected: https://app.clickup.com/{workspaceId}/v/s/{spaceId}');
+
+  if (WORKER_URL.includes('YOUR_WORKER')) {
+    return showError('Set <code>WORKER_URL</code> in index.html to your deployed Cloudflare Worker URL. See README for setup steps.');
+  }
+
+  localStorage.setItem('cu_dash_url', rawUrl);
+
+  setGenerating(true);
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+
+  log(`Parsed workspace=${ids.workspaceId} space=${ids.spaceId}`, 'ok');
+  log('Fetching from ClickUp via Claude…', 'spin');
+
+  try {
+    const data = await callProxy(ids);
+    log('Data received — rendering dashboard…', 'ok');
+    renderDashboard(data, ids);
+    log('Done!', 'ok');
+    setTimeout(() => { document.getElementById('progress-wrap').style.display = 'none'; }, 1200);
+  } catch (e) {
+    log('Error: ' + e.message, 'err');
+    showError(e.message);
+  } finally {
+    setGenerating(false);
+  }
+}
+
+async function callProxy(ids) {
+  const prompt = `
+You have access to the ClickUp MCP server.
+
+1. Call clickup_get_workspace_hierarchy with workspace_id="${ids.workspaceId}", space_ids=["${ids.spaceId}"], max_depth=2
+2. Call clickup_filter_tasks with space_ids=["${ids.spaceId}"], workspace_id="${ids.workspaceId}", include_closed=true, subtasks=true
+
+Return ONLY a valid JSON object (no markdown, no backticks, no explanation) with this structure:
+{
+  "spaceName": "<string>",
+  "projects": [{ "id": "<string>", "name": "<string>", "taskCount": <number> }],
+  "tasks": [{
+    "id": "<string>",
+    "name": "<string>",
+    "status": "<string>",
+    "priority": "<string or null>",
+    "list": "<string>",
+    "url": "<string>",
+    "due_date": "<string or null>",
+    "assignees": ["<username string>"]
+  }],
+  "assigneeCounts": { "<name>": <number> },
+  "statusCounts": { "<status>": <number> },
+  "priorityCounts": { "<priority>": <number> }
+}
+
+Rules: priority = "urgent"|"high"|"normal"|"low"|null. Use "none" key in priorityCounts for null. Skip null usernames. Return ONLY the JSON.
+`;
+
+  const res = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8000,
+      messages: [{ role: 'user', content: prompt }],
+      mcp_servers: [{
+        type: 'url',
+        url: 'https://mcp.clickup.com/mcp',
+        name: 'clickup'
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Worker error ${res.status}`);
+  }
+
+  const body = await res.json();
+  const textBlocks = (body.content || []).filter(b => b.type === 'text');
+  if (!textBlocks.length) throw new Error('No text in response — check ClickUp MCP is connected at claude.ai/settings/integrations');
+
+  const raw = textBlocks.map(b => b.text).join('');
+  const clean = raw.replace(/```json|```/g, '').trim();
+
+  try {
+    return JSON.parse(clean);
+  } catch {
+    console.error('Raw Claude response:', raw);
+    throw new Error('Response parse failed — see browser console for raw output.');
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+const PROJECT_COLORS = ['#7c6af7','#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9','#4ade80'];
+const STATUS_COLORS  = { 's-todo':'#4b4b5e','s-ip':'#7c6af7','s-pft':'#fbbf24','s-uat':'#34d399','s-ruat':'#60a5fa','s-live':'#34d399' };
+
+function statusClass(s) {
+  return { 'to do':'s-todo','in progress':'s-ip','pending for testing':'s-pft','uat':'s-uat','release to uat':'s-ruat','live':'s-live' }[(s||'').toLowerCase()] || 's-other';
+}
+function priorityClass(p) {
+  return { urgent:'p-urgent',high:'p-high',normal:'p-normal',low:'p-low' }[p] || 'p-none';
+}
+function initials(name) { return (name||'?').split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2); }
+function barW(val, max)  { return max ? Math.max(4, Math.round(val/max*100)) : 0; }
+
+function renderDashboard(data, ids) {
+  const total  = data.tasks?.length || 0;
+  const urgent = data.priorityCounts?.urgent || 0;
+  const inprog = data.statusCounts?.['in progress'] || 0;
+  const live   = data.statusCounts?.live || 0;
+  const pft    = data.statusCounts?.['pending for testing'] || 0;
+
+  const projColorMap = {};
+  (data.projects || []).forEach((p, i) => { projColorMap[p.name] = PROJECT_COLORS[i % PROJECT_COLORS.length]; });
+
+  // Project bars
+  const maxProj = Math.max(...(data.projects||[]).map(p=>p.taskCount), 1);
+  const projBars = (data.projects||[]).sort((a,b)=>b.taskCount-a.taskCount).map(p =>
+    `<div class="bar-row">
+      <span class="bar-label" title="${esc(p.name)}">${esc(p.name)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${barW(p.taskCount,maxProj)}%;background:${projColorMap[p.name]||'#7c6af7'}"></div></div>
+      <span class="bar-count">${p.taskCount}</span>
+    </div>`).join('');
+
+  // Status breakdown
+  const statusOrder = [['to do','To do'],['in progress','In progress'],['pending for testing','Pending test'],['uat','UAT'],['release to uat','Release to UAT'],['live','Live']];
+  const maxSt = Math.max(...statusOrder.map(([k])=>data.statusCounts?.[k]||0), 1);
+  const statusRows = statusOrder.map(([k,l]) => {
+    const cnt = data.statusCounts?.[k] || 0;
+    if (!cnt) return '';
+    const sc = statusClass(k);
+    return `<div class="srow">
+      <span class="badge ${sc}">${l}</span>
+      <div class="bar-track" style="flex:1"><div class="bar-fill" style="width:${barW(cnt,maxSt)}%;background:${STATUS_COLORS[sc]||'#888'}"></div></div>
+      <span style="font-size:12px;color:var(--muted);min-width:28px;text-align:right;font-family:var(--mono)">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  // Priority bars
+  const prioOrder = [{k:'urgent',l:'Urgent',c:'#f87171'},{k:'high',l:'High',c:'#fbbf24'},{k:'normal',l:'Normal',c:'#60a5fa'},{k:'low',l:'Low',c:'#6b6b80'},{k:'none',l:'None',c:'#2a2a35'}];
+  const maxPr = Math.max(...prioOrder.map(p=>data.priorityCounts?.[p.k]||0), 1);
+  const prioBars = prioOrder.map(p => {
+    const cnt = data.priorityCounts?.[p.k] || 0;
+    if (!cnt) return '';
+    return `<div class="bar-row">
+      <span class="bar-label">${p.l}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${barW(cnt,maxPr)}%;background:${p.c}"></div></div>
+      <span class="bar-count">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  // Assignees
+  const maxA = Math.max(...Object.values(data.assigneeCounts||{}), 1);
+  const assigneeHTML = Object.entries(data.assigneeCounts||{}).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([name,cnt]) =>
+    `<div class="arow">
+      <div class="av">${initials(name)}</div>
+      <span class="aname">${esc(name)}</span>
+      <div class="bar-track" style="width:70px"><div class="bar-fill" style="width:${barW(cnt,maxA)}%;background:var(--accent)"></div></div>
+      <span class="acount">${cnt}</span>
+    </div>`).join('');
+
+  // Filter buttons
+  const projects = ['All', ...(data.projects||[]).map(p=>p.name)];
+  const filterBtns = projects.map(p =>
+    `<button class="fbtn${p==='All'?' active':''}" onclick="filterTasks(${JSON.stringify(p)})">${p==='All'?'All projects':esc(p)}</button>`
+  ).join('');
+
+  // Task rows
+  const taskRows = (data.tasks||[]).map(t => {
+    const pc = projColorMap[t.list] || '#7c6af7';
+    return `<tr data-project="${esc(t.list||'')}">
+      <td><span class="task-name" title="${esc(t.name||'')}">${esc(t.name||'')}</span></td>
+      <td><span class="proj-tag" style="border-left:2px solid ${pc};padding-left:6px">${esc(t.list||'')}</span></td>
+      <td><span class="badge ${statusClass(t.status||'')}">${esc(t.status||'')}</span></td>
+      <td><div style="display:flex;align-items:center;gap:5px"><span class="pdot ${priorityClass(t.priority)}"></span><span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${t.priority||'—'}</span></div></td>
+      <td>${t.url?`<a href="${t.url}" target="_blank" class="task-link">↗</a>`:''}</td>
+    </tr>`;
+  }).join('');
+
+  const now = new Date().toLocaleString();
+  const el = document.getElementById('dashboard');
+
+  el.innerHTML = `
+    <div class="dash-header">
+      <div>
+        <div class="dash-title">${esc(data.spaceName||'ClickUp Space')}</div>
+        <div class="dash-meta">Generated ${now} · ${total} tasks · workspace ${ids.workspaceId}</div>
+      </div>
+      <button class="btn-refresh" onclick="generate()">↻ Refresh</button>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metric-card"><div class="metric-label">Total tasks</div><div class="metric-val">${total}</div></div>
+      <div class="metric-card"><div class="metric-label">Urgent</div><div class="metric-val urgent">${urgent}</div></div>
+      <div class="metric-card"><div class="metric-label">In progress</div><div class="metric-val inprog">${inprog}</div></div>
+      <div class="metric-card"><div class="metric-label">Live</div><div class="metric-val live">${live}</div></div>
+      <div class="metric-card"><div class="metric-label">Pending test</div><div class="metric-val warn">${pft}</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card"><div class="card-title">Tasks by project</div>${projBars||'<span style="color:var(--muted);font-size:12px;font-family:var(--mono)">No projects found</span>'}</div>
+      <div class="card"><div class="card-title">Status breakdown</div>${statusRows||'<span style="color:var(--muted);font-size:12px;font-family:var(--mono)">No data</span>'}</div>
+      <div class="card"><div class="card-title">Priority breakdown</div>${prioBars||'<span style="color:var(--muted);font-size:12px;font-family:var(--mono)">No data</span>'}</div>
+      <div class="card"><div class="card-title">Top assignees</div>${assigneeHTML||'<span style="color:var(--muted);font-size:12px;font-family:var(--mono)">No assignees</span>'}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">All tasks</div>
+      <div class="task-filters">${filterBtns}</div>
+      <table class="task-table">
+        <thead><tr><th>Task</th><th>Project</th><th>Status</th><th>Priority</th><th></th></tr></thead>
+        <tbody id="task-tbody">${taskRows}</tbody>
+      </table>
+    </div>`;
+
+  el.style.display = 'block';
+  document.getElementById('header-meta').textContent = data.spaceName || '';
+  window._allTaskRows = [...document.querySelectorAll('#task-tbody tr')];
+}
+
+window.filterTasks = function(project) {
+  document.querySelectorAll('.fbtn').forEach(b => {
+    b.classList.toggle('active', b.textContent === (project==='All'?'All projects':project));
+  });
+  const tbody = document.getElementById('task-tbody');
+  tbody.innerHTML = '';
+  (window._allTaskRows||[]).forEach(row => {
+    if (project==='All' || row.dataset.project===project) tbody.appendChild(row);
+  });
+};
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
