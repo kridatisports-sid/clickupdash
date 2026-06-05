@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#080c14;--surface:#0d1320;--surface2:#111827;--surface3:#1a2235;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);
+  --gold:#c9a84c;--gold2:#e8c96a;--gold-dim:rgba(201,168,76,0.1);
+  --text:#e8edf5;--text2:#94a3b8;--text3:#4a5568;
+  --success:#10b981;--warning:#f59e0b;--danger:#ef4444;--info:#3b82f6;--purple:#8b5cf6;
+  --font-d:'Playfair Display',serif;--font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+  --r:8px;--r-lg:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* SETUP */
+.setup-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+.setup-box{width:100%;max-width:460px}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+.setup-title{font-family:var(--font-d);font-size:42px;line-height:1.1;margin-bottom:.5rem}
+.setup-sub{color:var(--text2);font-size:13px;font-weight:300;margin-bottom:2.5rem;line-height:1.6}
+.fg{margin-bottom:1.25rem}
+.fl{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);margin-bottom:6px}
+.fi{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:12px 14px;font-size:13px;font-family:var(--mono);color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s}
+.fi:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.1)}
+.fi::placeholder{color:var(--text3)}
+.fh{font-size:11px;color:var(--text3);margin-top:5px}
+.fh a{color:var(--gold);text-decoration:none}
+.btn-go{width:100%;padding:13px;background:var(--gold);color:#080c14;border:none;border-radius:var(--r);font-size:13px;font-weight:600;font-family:var(--font);letter-spacing:.04em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-go:hover{background:var(--gold2)}.btn-go:disabled{opacity:.4;cursor:not-allowed}
+.err-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:var(--r);padding:.75rem 1rem;font-size:12px;color:#fca5a5;margin-top:1rem;font-family:var(--mono);line-height:1.5}
+
+/* PROGRESS */
+#prog-wrap{position:fixed;bottom:2rem;right:2rem;width:320px;z-index:999;display:none}
+.prog-box{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-lg);padding:1rem 1.25rem;box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:200px;overflow-y:auto}
+.prog-title{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.ll{font-family:var(--mono);font-size:11px;color:var(--text3);padding:2px 0}
+.ll.ok{color:var(--success)}.ll.sp{color:var(--gold)}.ll.er{color:var(--danger)}
+
+/* DASHBOARD */
+#dash{display:none}
+.topbar{height:60px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2.5rem;background:var(--surface);position:sticky;top:0;z-index:100}
+.brand{font-family:var(--font-d);font-size:17px;display:flex;align-items:center;gap:10px}
+.brand::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold);display:block}
+.tb-right{display:flex;align-items:center;gap:1rem}
+.tb-space{font-family:var(--mono);font-size:11px;color:var(--gold);background:var(--gold-dim);padding:3px 10px;border-radius:20px;border:1px solid rgba(201,168,76,.2)}
+.tb-meta{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.btn-sm{background:var(--surface3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text2);font-size:12px;font-family:var(--font);font-weight:500;padding:7px 14px;cursor:pointer;transition:all .2s}
+.btn-sm:hover{border-color:var(--gold);color:var(--gold)}
+.dash-body{max-width:1400px;margin:0 auto;padding:2.5rem 2.5rem 5rem}
+
+/* section */
+.sec{display:flex;align-items:center;gap:10px;margin:2.5rem 0 1.25rem}
+.sec-line{flex:1;height:1px;background:var(--border)}
+.sec-lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);white-space:nowrap}
+.sec-num{font-family:var(--mono);font-size:10px;color:var(--gold);background:var(--gold-dim);padding:2px 7px;border-radius:10px}
+
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:2rem}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.25rem 1.25rem 1rem;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r-lg) var(--r-lg) 0 0}
+.kpi.ck-gold::before{background:var(--gold)}.kpi.ck-green::before{background:var(--success)}
+.kpi.ck-red::before{background:var(--danger)}.kpi.ck-yellow::before{background:var(--warning)}
+.kpi.ck-blue::before{background:var(--info)}.kpi.ck-purple::before{background:var(--purple)}
+.kpi-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.kpi-val{font-family:var(--font-d);font-size:36px;line-height:1;margin-bottom:4px}
+.kpi-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.kpi.ck-gold .kpi-val{color:var(--gold)}.kpi.ck-green .kpi-val{color:var(--success)}
+.kpi.ck-red .kpi-val{color:var(--danger)}.kpi.ck-yellow .kpi-val{color:var(--warning)}
+.kpi.ck-blue .kpi-val{color:var(--info)}.kpi.ck-purple .kpi-val{color:var(--purple)}
+
+/* cards & grids */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem}
+.card-t{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:1.25rem}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.g13{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px}
+.g31{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.g2,.g3,.g13,.g31{grid-template-columns:1fr}}
+
+/* chart clickable hint */
+.chart-hint{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.chart-hint::before{content:'👆';font-size:11px}
+
+/* drill-down panel */
+.drill-panel{background:var(--surface2);border:1px solid var(--gold-dim);border-radius:var(--r-lg);padding:1.25rem;margin-top:12px;display:none;animation:slideIn .2s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.drill-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.drill-title{font-size:12px;font-weight:600;color:var(--gold);font-family:var(--mono);letter-spacing:.05em}
+.drill-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;transition:color .15s}
+.drill-close:hover{color:var(--danger)}
+.drill-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto}
+.drill-task{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface3);border-radius:var(--r);text-decoration:none;transition:background .15s;border:1px solid transparent}
+.drill-task:hover{background:rgba(201,168,76,.08);border-color:rgba(201,168,76,.15)}
+.drill-task-name{font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drill-task-meta{font-size:10px;color:var(--text3);font-family:var(--mono);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.drill-task-link{font-size:11px;color:var(--gold);flex-shrink:0;font-family:var(--mono)}
+.drill-empty{font-size:12px;color:var(--text3);text-align:center;padding:1.5rem;font-family:var(--mono)}
+
+/* bars */
+.bi{display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s}
+.bi:hover{background:var(--surface3)}
+.bi.active{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.15)}
+.bl{font-size:12px;color:var(--text2);width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+.bt{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.bf{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.bc{font-size:11px;color:var(--text3);width:28px;text-align:right;font-family:var(--mono)}
+.bp{font-size:10px;color:var(--text3);width:32px;text-align:right;font-family:var(--mono)}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;font-family:var(--mono);white-space:nowrap;border:1px solid transparent}
+.b-todo{background:rgba(148,163,184,.08);color:var(--text3);border-color:rgba(148,163,184,.12)}
+.b-inprog{background:rgba(139,92,246,.12);color:#a78bfa;border-color:rgba(139,92,246,.2)}
+.b-pft{background:rgba(245,158,11,.1);color:var(--warning);border-color:rgba(245,158,11,.2)}
+.b-uat{background:rgba(16,185,129,.1);color:var(--success);border-color:rgba(16,185,129,.2)}
+.b-ruat{background:rgba(59,130,246,.1);color:var(--info);border-color:rgba(59,130,246,.2)}
+.b-live{background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.25)}
+.b-other{background:rgba(148,163,184,.08);color:var(--text3);border-color:rgba(148,163,184,.12)}
+.b-urgent{background:rgba(239,68,68,.1);color:var(--danger);border-color:rgba(239,68,68,.2)}
+.b-high{background:rgba(245,158,11,.1);color:var(--warning);border-color:rgba(245,158,11,.2)}
+.b-normal{background:rgba(59,130,246,.1);color:var(--info);border-color:rgba(59,130,246,.2)}
+.b-low{background:rgba(148,163,184,.08);color:var(--text3);border-color:rgba(148,163,184,.12)}
+.pdot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.pd-urgent{background:var(--danger)}.pd-high{background:var(--warning)}.pd-normal{background:var(--info)}.pd-low{background:var(--text3)}.pd-none{background:var(--surface3)}
+
+/* pie */
+.pie-wrap{display:flex;align-items:center;gap:2rem;flex-wrap:wrap}
+.pie-cw{position:relative;width:190px;height:190px;flex-shrink:0}
+.pie-cw canvas{cursor:pointer}
+.leg-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:4px 6px;border-radius:6px;transition:background .15s;cursor:pointer}
+.leg-row:hover{background:var(--surface3)}
+.leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.leg-name{font-size:12px;color:var(--text2);flex:1}
+.leg-val{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.leg-pct{font-family:var(--mono);font-size:11px;color:var(--gold);min-width:36px;text-align:right}
+
+/* project health */
+.ph-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px;transition:background .15s;padding-left:6px;padding-right:6px}
+.ph-row:last-child{border-bottom:none}
+.ph-row:hover{background:var(--surface3)}
+.ph-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.ph-name{font-size:12px;color:var(--text);flex:1;font-weight:500}
+.ph-stack{flex:1;max-width:160px;height:8px;border-radius:4px;overflow:hidden;display:flex;background:var(--surface3)}
+.ph-seg{height:100%;cursor:pointer}
+.ph-num{font-family:var(--mono);font-size:11px;color:var(--text3);width:28px;text-align:right}
+
+/* assignee cards */
+.ac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-bottom:16px}
+.ac{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.25rem;transition:border-color .2s;cursor:pointer}
+.ac:hover{border-color:var(--gold)}
+.ac-head{display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.ac-av{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.ac-name{font-size:13px;font-weight:600}
+.ac-sub{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.ac-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ac-s{background:var(--surface3);border-radius:6px;padding:8px 10px}
+.ac-sl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.ac-sv{font-family:var(--font-d);font-size:20px}
+.ac-sb{margin-top:6px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.ac-sbf{height:100%;border-radius:2px}
+.ac-proj{margin-top:10px;font-size:10px;color:var(--text3);font-family:var(--mono)}
+.ac-hint{font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:8px;text-align:center;opacity:.6}
+
+/* table */
+.tbl-controls{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
+.fg-block{display:flex;flex-direction:column;gap:5px}
+.fg-lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono)}
+.fg-btns{display:flex;gap:4px;flex-wrap:wrap}
+.fbtn{font-size:10px;font-family:var(--mono);padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.fbtn:hover{border-color:var(--gold);color:var(--gold)}
+.fbtn.on{background:var(--gold);border-color:var(--gold);color:#080c14;font-weight:600}
+.search-wrap{margin-left:auto;align-self:flex-end}
+.srch{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:6px 12px;font-size:12px;font-family:var(--mono);color:var(--text);outline:none;width:200px;transition:border-color .2s}
+.srch:focus{border-color:var(--gold)}.srch::placeholder{color:var(--text3)}
+table{width:100%;border-collapse:collapse}
+thead th{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:0 10px 10px 0;text-align:left;border-bottom:1px solid var(--border2);font-family:var(--mono);cursor:pointer;user-select:none;white-space:nowrap}
+thead th:hover{color:var(--gold)}.th-sorted{color:var(--gold)!important}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody td{padding:10px 10px 10px 0;vertical-align:middle}
+.td-name{max-width:260px;font-size:12px;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-name-link{max-width:260px;font-size:12px;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;transition:color .15s}
+.td-name-link:hover{color:var(--gold)}
+.td-proj{font-size:10px;color:var(--text3);font-family:var(--mono);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.td-dot{width:6px;height:6px;border-radius:2px;flex-shrink:0}
+.td-av{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;flex-shrink:0}
+.td-avs{display:flex;gap:3px;flex-wrap:wrap}
+.td-due{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.td-due.ov{color:var(--danger)}
+.tbl-foot{display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.tbl-info{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.pgbtns{display:flex;gap:4px}
+.pgbtn{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:11px;font-family:var(--mono);padding:5px 10px;cursor:pointer;transition:all .15s}
+.pgbtn:hover{border-color:var(--gold);color:var(--gold)}.pgbtn.on{background:var(--gold);border-color:var(--gold);color:#080c14;font-weight:600}.pgbtn:disabled{opacity:.3;cursor:not-allowed}
+.empty{text-align:center;padding:3rem;color:var(--text3);font-size:13px}
+
+/* DAILY STATUS */
+.ds-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:700px){.ds-wrap{grid-template-columns:1fr}}
+.ds-date{font-family:var(--mono);font-size:11px;color:var(--gold);margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.ds-date::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--gold);display:block}
+.ds-snapshot{display:flex;flex-direction:column;gap:0}
+.ds-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;border-radius:4px;padding-left:4px;padding-right:4px}
+.ds-row:last-child{border-bottom:none}
+.ds-row:hover{background:var(--surface3)}
+.ds-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.ds-label{font-size:12px;color:var(--text2);flex:1;font-family:var(--mono)}
+.ds-val{font-family:var(--font-d);font-size:18px;color:var(--text);min-width:36px;text-align:right}
+.ds-pct{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:36px;text-align:right}
+.ds-bar-wrap{width:80px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;flex-shrink:0}
+.ds-bar{height:100%;border-radius:2px}
+.ds-note{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:12px;padding:8px 10px;background:var(--surface3);border-radius:6px;border-left:2px solid var(--gold);line-height:1.5}
+.ds-total-row{display:flex;align-items:center;gap:10px;padding:10px 4px 12px;border-bottom:1px solid var(--border2);margin-bottom:4px}
+.ds-total-lbl{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;font-family:var(--mono);flex:1}
+.ds-total-val{font-family:var(--font-d);font-size:22px;color:var(--gold)}
+
+/* team workload */
+.tw-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;border-radius:4px}
+.tw-row:last-child{border-bottom:none}
+.tw-row:hover{background:var(--surface3)}
+.tw-av{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.tw-name{font-size:12px;color:var(--text);flex:1;font-weight:500}
+.tw-stats{display:flex;gap:12px;align-items:center}
+.tw-open{font-size:12px;color:var(--warning);font-family:var(--mono)}
+.tw-done{font-size:12px;color:var(--success);font-family:var(--mono)}
+.tw-progress{width:60px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.tw-progress-fill{height:100%;border-radius:2px;background:var(--success)}
+.ds-drill-panel{background:var(--surface2);border:1px solid var(--gold-dim);border-radius:var(--r-lg);padding:1.25rem;margin-top:12px;display:none;animation:slideIn .2s ease}
+.ds-export-btn{background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);color:var(--gold);font-size:11px;font-family:var(--mono);padding:5px 12px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.ds-export-btn:hover{background:var(--gold);color:#080c14}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div class="setup-page" id="setup-page">
+  <div class="setup-box">
+    <div class="eyebrow">Tecsolex · Project Intelligence</div>
+    <h1 class="setup-title">Executive<br>Dashboard</h1>
+    <p class="setup-sub">Real-time project health, team performance and delivery insights — powered directly by ClickUp.</p>
+    <div class="fg">
+      <label class="fl">ClickUp API Token</label>
+      <input type="password" class="fi" id="ikey" placeholder="pk_xxxxxxxx_XXXXXXXXXXXXXXXXXX"/>
+      <p class="fh">ClickUp → Settings → Apps → API Token. Saved in your browser only.</p>
+    </div>
+    <div class="fg">
+      <label class="fl">Space URL</label>
+      <input type="url" class="fi" id="iurl" placeholder="https://app.clickup.com/90161601633/v/s/90166936041"/>
+    </div>
+    <button class="btn-go" id="gbtn" onclick="generate()">
+      <span id="gicon">→</span><span id="gtxt">Generate Dashboard</span>
+    </button>
+    <div id="ebox"></div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div id="prog-wrap">
+  <div class="prog-box">
+    <div class="prog-title">Loading data</div>
+    <div id="plog"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <div class="topbar">
+    <div class="brand" id="tb-brand">Dashboard</div>
+    <div class="tb-right">
+      <span class="tb-space" id="tb-space"></span>
+      <span class="tb-meta" id="tb-meta"></span>
+      <button class="btn-sm" onclick="generate()">↻ Refresh</button>
+      <button class="btn-sm" onclick="goBack()" style="color:var(--text3)">← New</button>
+    </div>
+  </div>
+  <div class="dash-body">
+
+    <div id="kpi-row" class="kpi-row"></div>
+
+    <div class="sec"><div class="sec-lbl">Project overview</div><div class="sec-line"></div></div>
+    <div class="g3">
+      <div class="card">
+        <div class="card-t">Status distribution</div>
+        <div class="chart-hint">Click a bar to see tasks</div>
+        <div style="position:relative;height:200px"><canvas id="cStatus"></canvas></div>
+        <div class="drill-panel" id="dp-status">
+          <div class="drill-header"><span class="drill-title" id="dp-status-title"></span><button class="drill-close" onclick="closeDrill('dp-status')">✕</button></div>
+          <div class="drill-list" id="dp-status-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t">Priority breakdown</div>
+        <div class="chart-hint">Click a segment to see tasks</div>
+        <div style="position:relative;height:200px"><canvas id="cPrio"></canvas></div>
+        <div class="drill-panel" id="dp-prio">
+          <div class="drill-header"><span class="drill-title" id="dp-prio-title"></span><button class="drill-close" onclick="closeDrill('dp-prio')">✕</button></div>
+          <div class="drill-list" id="dp-prio-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t">Tasks by project</div>
+        <div class="chart-hint">Click a row to see tasks</div>
+        <div id="proj-bars"></div>
+        <div class="drill-panel" id="dp-proj">
+          <div class="drill-header"><span class="drill-title" id="dp-proj-title"></span><button class="drill-close" onclick="closeDrill('dp-proj')">✕</button></div>
+          <div class="drill-list" id="dp-proj-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="g31">
+      <div class="card">
+        <div class="card-t">Project health — status composition per list</div>
+        <div class="chart-hint">Click a row to see all tasks in that project</div>
+        <div id="proj-health"></div>
+        <div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:2px;background:#8b5cf6"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">In progress</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:2px;background:#f59e0b"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">Pending test</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:2px;background:#10b981"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">UAT / Live</span></div>
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:2px;background:#1e293b"></div><span style="font-size:10px;color:var(--text3);font-family:var(--mono)">To do</span></div>
+        </div>
+        <div class="drill-panel" id="dp-health">
+          <div class="drill-header"><span class="drill-title" id="dp-health-title"></span><button class="drill-close" onclick="closeDrill('dp-health')">✕</button></div>
+          <div class="drill-list" id="dp-health-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t">Completion rate</div>
+        <div style="position:relative;height:180px"><canvas id="cComp"></canvas></div>
+        <div id="comp-leg" style="margin-top:12px"></div>
+        <div class="drill-panel" id="dp-comp">
+          <div class="drill-header"><span class="drill-title" id="dp-comp-title"></span><button class="drill-close" onclick="closeDrill('dp-comp')">✕</button></div>
+          <div class="drill-list" id="dp-comp-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec"><div class="sec-lbl">Team performance</div><div class="sec-line"></div></div>
+    <div class="g13">
+      <div class="card">
+        <div class="card-t">Workload distribution</div>
+        <div class="chart-hint">Click a bar to see that person's tasks</div>
+        <div style="position:relative;height:260px"><canvas id="cWork"></canvas></div>
+        <div class="drill-panel" id="dp-work">
+          <div class="drill-header"><span class="drill-title" id="dp-work-title"></span><button class="drill-close" onclick="closeDrill('dp-work')">✕</button></div>
+          <div class="drill-list" id="dp-work-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t">Assignee share</div>
+        <div class="chart-hint">Click a slice or name to see tasks</div>
+        <div class="pie-wrap">
+          <div class="pie-cw"><canvas id="cPie"></canvas></div>
+          <div id="pie-leg"></div>
+        </div>
+        <div class="drill-panel" id="dp-pie">
+          <div class="drill-header"><span class="drill-title" id="dp-pie-title"></span><button class="drill-close" onclick="closeDrill('dp-pie')">✕</button></div>
+          <div class="drill-list" id="dp-pie-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ac-grid" id="ac-grid"></div>
+
+    <!-- DAILY STATUS REPORT -->
+    <div class="sec"><div class="sec-lbl">Daily status report</div><div class="sec-line"></div>
+      <button class="ds-export-btn" onclick="exportStatus()">⬇ Export report</button>
+    </div>
+    <div class="ds-wrap">
+      <!-- Overall snapshot -->
+      <div class="card">
+        <div class="card-t" style="display:flex;align-items:center;justify-content:space-between">
+          Overall snapshot
+          <span id="ds-date" class="ds-date"></span>
+        </div>
+        <div class="ds-total-row">
+          <span class="ds-total-lbl">Total tasks tracked</span>
+          <span class="ds-total-val" id="ds-total">—</span>
+        </div>
+        <div class="ds-snapshot" id="ds-snapshot"></div>
+        <div class="ds-note" id="ds-note"></div>
+        <div class="ds-drill-panel" id="dp-ds">
+          <div class="drill-header"><span class="drill-title" id="dp-ds-title"></span><button class="drill-close" onclick="closeDrill('dp-ds')">✕</button></div>
+          <div class="drill-list" id="dp-ds-list"></div>
+        </div>
+      </div>
+      <!-- Team workload -->
+      <div class="card">
+        <div class="card-t">Team workload summary</div>
+        <div id="ds-team"></div>
+        <div class="ds-drill-panel" id="dp-tw">
+          <div class="drill-header"><span class="drill-title" id="dp-tw-title"></span><button class="drill-close" onclick="closeDrill('dp-tw')">✕</button></div>
+          <div class="drill-list" id="dp-tw-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec"><div class="sec-lbl">Task registry</div><div class="sec-line"></div><div class="sec-num" id="task-count-lbl">0 tasks</div></div>
+    <div class="card">
+      <div class="tbl-controls">
+        <div class="fg-block"><div class="fg-lbl">Project</div><div class="fg-btns" id="f-proj"></div></div>
+        <div class="fg-block"><div class="fg-lbl">Status</div><div class="fg-btns" id="f-stat"></div></div>
+        <div class="fg-block"><div class="fg-lbl">Priority</div><div class="fg-btns" id="f-prio"></div></div>
+        <div class="search-wrap"><input class="srch" type="text" id="srch" placeholder="Search tasks…" oninput="applyFilters()"/></div>
+      </div>
+      <table>
+        <thead><tr>
+          <th style="width:32%" onclick="doSort('name')" id="th-name">Task ↕</th>
+          <th style="width:14%" onclick="doSort('list')" id="th-list">Project ↕</th>
+          <th style="width:12%" onclick="doSort('status')" id="th-status">Status ↕</th>
+          <th style="width:10%" onclick="doSort('priority')" id="th-priority">Priority ↕</th>
+          <th style="width:16%">Assignees</th>
+          <th style="width:10%" onclick="doSort('due')" id="th-due">Due ↕</th>
+        </tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+      <div class="tbl-foot">
+        <div class="tbl-info" id="tbl-info"></div>
+        <div class="pgbtns" id="pgbtns"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var PAL=['#c9a84c','#8b5cf6','#10b981','#3b82f6','#ef4444','#14b8a6','#f59e0b','#e879f9','#4ade80','#fb923c','#60a5fa','#34d399'];
+function rgba(hex,a){var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return'rgba('+r+','+g+','+b+','+a+')'}
+
+var G={tasks:[],projects:[],acm:{},aDetail:{},sCounts:{},pCounts:{},spaceName:''};
+var F={proj:'All',stat:'All',prio:'All',sort:'name',dir:1};
+var PAGE=0,PAGE_SIZE=25;
+var CHARTS={};
+var ASGN_COLORS={};
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function ini(n){return(n||'?').split(' ').map(function(w){return w[0]||''}).join('').toUpperCase().slice(0,2)}
+function bw(v,m){return m?Math.max(2,Math.round(v/m*100)):0}
+function prioNum(p){return{1:'urgent',2:'high',3:'normal',4:'low'}[p]||null}
+function fmtDate(ms){if(!ms)return'—';var d=new Date(Number(ms));return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}
+function isOver(ms){return ms&&Date.now()>Number(ms)}
+function scls(s){return{'to do':'b-todo','in progress':'b-inprog','pending for testing':'b-pft','uat':'b-uat','release to uat':'b-ruat','live':'b-live'}[(s||'').toLowerCase()]||'b-other'}
+function pcls(p){return{urgent:'b-urgent',high:'b-high',normal:'b-normal',low:'b-low'}[p]||'b-other'}
+function pdcls(p){return{urgent:'pd-urgent',high:'pd-high',normal:'pd-normal',low:'pd-low'}[p]||'pd-none'}
+function slbl(s){return{'to do':'To Do','in progress':'In Progress','pending for testing':'Pending Test','uat':'UAT','release to uat':'Rel. to UAT','live':'Live'}[(s||'').toLowerCase()]||s}
+function killChart(k){if(CHARTS[k]){CHARTS[k].destroy();delete CHARTS[k]}}
+
+function log(msg,cls){
+  $('prog-wrap').style.display='block';
+  var d=document.createElement('div');d.className='ll '+(cls||'');
+  var t=new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent=t+' '+msg;$('plog').appendChild(d);$('plog').scrollTop=$('plog').scrollHeight;
+}
+function setLoading(on){
+  $('gbtn').disabled=on;
+  $('gicon').innerHTML=on?'<span class="spin"></span>':'→';
+  $('gtxt').textContent=on?'Loading…':'Generate Dashboard';
+}
+function showErr(m){$('ebox').innerHTML='<div class="err-box">'+m+'</div>'}
+
+// ── DRILL-DOWN ────────────────────────────────────────────────────────────────
+function showDrill(panelId, titleId, listId, title, tasks){
+  // close others in same card
+  document.querySelectorAll('.drill-panel').forEach(function(p){
+    if(p.id!==panelId)p.style.display='none';
+  });
+  var panel=$(panelId),tEl=$(titleId),lEl=$(listId);
+  if(!panel)return;
+  $(titleId).textContent=title+' ('+tasks.length+' task'+(tasks.length!==1?'s':'')+')';
+  if(!tasks.length){
+    lEl.innerHTML='<div class="drill-empty">No tasks found.</div>';
+  }else{
+    lEl.innerHTML=tasks.map(function(t){
+      var pcm={};G.projects.forEach(function(p){pcm[p.name]=p.color});
+      var pc=pcm[t.list]||'#4a5568';
+      return'<a href="'+(t.url||'#')+'" target="_blank" class="drill-task">'+
+        '<div style="width:6px;height:6px;border-radius:2px;flex-shrink:0;background:'+pc+'"></div>'+
+        '<span class="drill-task-name" title="'+esc(t.name)+'">'+esc(t.name)+'</span>'+
+        '<span class="drill-task-meta">'+
+          '<span class="badge '+scls(t.status)+'">'+slbl(t.status)+'</span>'+
+          (t.priority?'<span class="badge '+pcls(t.priority)+'">'+t.priority+'</span>':'')+
+        '</span>'+
+        '<span class="drill-task-link">↗</span>'+
+      '</a>';
+    }).join('');
+  }
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function closeDrill(id){$(id).style.display='none'}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',function(){
+  var k=localStorage.getItem('cu_key')||'';
+  var u=localStorage.getItem('cu_url')||'';
+  if(k)$('ikey').value=k;
+  if(u)$('iurl').value=u;
+});
+
+function goBack(){
+  ['cStatus','cPrio','cComp','cWork','cPie'].forEach(killChart);
+  $('dash').style.display='none';$('setup-page').style.display='flex';
+}
+
+function parseURL(u){var m=u.match(/app\.clickup\.com\/(\d+)\/v\/[sl]\/(\d+)/);return m?{w:m[1],s:m[2]}:null}
+async function cuFetch(token,path){
+  var res=await fetch('https://api.clickup.com/api/v2'+path,{headers:{'Authorization':token}});
+  if(!res.ok){var e=await res.json().catch(function(){return{}});throw new Error(e.err||e.error||'ClickUp error '+res.status);}
+  return res.json();
+}
+
+async function generate(){
+  $('ebox').innerHTML='';$('plog').innerHTML='';
+  var token=$('ikey').value.trim(),rawUrl=$('iurl').value.trim();
+  if(!token)return showErr('Enter your ClickUp API token.');
+  if(!rawUrl)return showErr('Enter your ClickUp space URL.');
+  var ids=parseURL(rawUrl);
+  if(!ids)return showErr('URL not recognised.');
+  localStorage.setItem('cu_key',token);localStorage.setItem('cu_url',rawUrl);
+  setLoading(true);
+  try{
+    log('Connecting…','sp');
+    var spaceData=await cuFetch(token,'/space/'+ids.s);
+    G.spaceName=spaceData.name||'Dashboard';log('Space: '+G.spaceName,'ok');
+    var listsRes=await cuFetch(token,'/space/'+ids.s+'/list?archived=false');
+    var lists=listsRes.lists||[];
+    var foldersRes=await cuFetch(token,'/space/'+ids.s+'/folder?archived=false');
+    for(var fi=0;fi<(foldersRes.folders||[]).length;fi++){
+      var fl=await cuFetch(token,'/folder/'+foldersRes.folders[fi].id+'/list?archived=false');
+      if(fl.lists)lists=lists.concat(fl.lists);
+    }
+    log(lists.length+' lists','ok');
+    G.tasks=[];
+    for(var li=0;li<lists.length;li++){
+      var list=lists[li];log('Fetching "'+list.name+'"…','sp');
+      var pg=0;
+      while(true){
+        var td=await cuFetch(token,'/list/'+list.id+'/task?include_closed=true&subtasks=true&page='+pg);
+        var tks=td.tasks||[];
+        for(var ti=0;ti<tks.length;ti++){
+          var t=tks[ti];
+          G.tasks.push({id:t.id,name:t.name,
+            status:(t.status&&t.status.status?t.status.status:'').toLowerCase(),
+            priority:prioNum(t.priority&&t.priority.priority?t.priority.priority:null),
+            list:list.name,url:t.url,due_date:t.due_date||null,
+            assignees:(t.assignees||[]).map(function(a){return a.username||a.email||''}).filter(Boolean)
+          });
+        }
+        if(tks.length<100)break;pg++;
+      }
+    }
+    log(G.tasks.length+' tasks','ok');
+    G.projects=[];
+    for(var pi=0;pi<lists.length;pi++){
+      var lname=lists[pi].name;
+      var cnt=G.tasks.filter(function(t){return t.list===lname}).length;
+      if(cnt>0)G.projects.push({name:lname,taskCount:cnt,color:PAL[pi%PAL.length]});
+    }
+    G.sCounts={};G.pCounts={};G.acm={};G.aDetail={};
+    for(var qi=0;qi<G.tasks.length;qi++){
+      var tk=G.tasks[qi];
+      var s=tk.status||'unknown';G.sCounts[s]=(G.sCounts[s]||0)+1;
+      var p=tk.priority||'none';G.pCounts[p]=(G.pCounts[p]||0)+1;
+      for(var ai=0;ai<tk.assignees.length;ai++){
+        var a=tk.assignees[ai];G.acm[a]=(G.acm[a]||0)+1;
+        if(!G.aDetail[a])G.aDetail[a]={total:0,s:{},p:{},proj:{}};
+        G.aDetail[a].total++;G.aDetail[a].s[s]=(G.aDetail[a].s[s]||0)+1;
+        G.aDetail[a].p[p]=(G.aDetail[a].p[p]||0)+1;
+        G.aDetail[a].proj[tk.list]=(G.aDetail[a].proj[tk.list]||0)+1;
+      }
+    }
+    // build assignee color map
+    Object.keys(G.acm).forEach(function(n,i){ASGN_COLORS[n]=PAL[i%PAL.length]});
+    log('Rendering…','sp');
+    $('setup-page').style.display='none';$('dash').style.display='block';
+    renderAll();log('Ready ✓','ok');
+    setTimeout(function(){$('prog-wrap').style.display='none'},2000);
+  }catch(e){log('Error: '+e.message,'er');showErr(e.message);}
+  finally{setLoading(false)}
+}
+
+function renderAll(){
+  $('tb-brand').textContent=G.spaceName+' — Executive Dashboard';
+  $('tb-space').textContent=G.spaceName;
+  $('tb-meta').textContent='Updated '+new Date().toLocaleTimeString();
+  renderKPIs();renderStatusChart();renderPrioChart();renderProjBars();
+  renderProjHealth();renderCompChart();renderWorkload();renderPie();
+  renderAssigneeCards();renderDailyStatus();buildFilters();applyFilters();
+}
+
+var TTIP={backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1};
+
+function renderKPIs(){
+  var total=G.tasks.length;
+  var done=(G.sCounts['live']||0)+(G.sCounts['uat']||0)+(G.sCounts['release to uat']||0);
+  var pct=total?Math.round(done/total*100):0;
+  $('kpi-row').innerHTML=
+    kpi('ck-gold','Total Tasks',total,'across '+G.projects.length+' projects')+
+    kpi('ck-green','Completed',done,pct+'% completion rate')+
+    kpi('ck-purple','In Progress',G.sCounts['in progress']||0,'active work items')+
+    kpi('ck-red','Urgent',G.pCounts['urgent']||0,'needs immediate action')+
+    kpi('ck-yellow','Overdue',G.tasks.filter(function(t){return isOver(t.due_date)&&t.status!=='live'}).length,'past due date')+
+    kpi('ck-blue','Team Size',Object.keys(G.acm).length,'members assigned');
+}
+function kpi(cls,lbl,val,sub){return'<div class="kpi '+cls+'"><div class="kpi-lbl">'+lbl+'</div><div class="kpi-val">'+val+'</div><div class="kpi-sub">'+sub+'</div></div>'}
+
+function renderStatusChart(){
+  killChart('cStatus');
+  var order=[['to do','#334155'],['in progress','#8b5cf6'],['pending for testing','#f59e0b'],['uat','#10b981'],['release to uat','#3b82f6'],['live','#34d399']];
+  var labels=order.map(function(x){return slbl(x[0])});
+  var values=order.map(function(x){return G.sCounts[x[0]]||0});
+  var colors=order.map(function(x){return x[1]});
+  var ctx=$('cStatus').getContext('2d');
+  CHARTS['cStatus']=new Chart(ctx,{
+    type:'bar',
+    data:{labels:labels,datasets:[{data:values,backgroundColor:colors.map(function(c){return rgba(c,.75)}),borderColor:colors,borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:TTIP},
+      scales:{x:{grid:{display:false},ticks:{color:'#4a5568',font:{family:'IBM Plex Mono',size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5568',font:{family:'IBM Plex Mono',size:9}}}}}
+  });
+  $('cStatus').onclick=function(e){
+    var pts=CHARTS['cStatus'].getElementsAtEventForMode(e,'nearest',{intersect:true},true);
+    if(!pts.length)return;
+    var idx=pts[0].index;
+    var statusKey=order[idx][0];
+    var tasks=G.tasks.filter(function(t){return t.status===statusKey});
+    showDrill('dp-status','dp-status-title','dp-status-list',slbl(statusKey)+' tasks',tasks);
+  };
+  $('cStatus').style.cursor='pointer';
+}
+
+function renderPrioChart(){
+  killChart('cPrio');
+  var order=[['urgent','#ef4444'],['high','#f59e0b'],['normal','#3b82f6'],['low','#4a5568'],['none','#1e293b']];
+  var labels=['Urgent','High','Normal','Low','None'];
+  var values=order.map(function(x){return G.pCounts[x[0]]||0});
+  var colors=order.map(function(x){return x[1]});
+  var total=values.reduce(function(a,b){return a+b},0);
+  var ctx=$('cPrio').getContext('2d');
+  CHARTS['cPrio']=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:values,backgroundColor:colors.map(function(c){return rgba(c,.8)}),borderColor:colors,borderWidth:1.5,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,callbacks:{label:function(ctx){return ' '+ctx.parsed+' ('+(total?Math.round(ctx.parsed/total*100):0)+'%)'}}}}}
+  });
+  $('cPrio').onclick=function(e){
+    var pts=CHARTS['cPrio'].getElementsAtEventForMode(e,'nearest',{intersect:true},true);
+    if(!pts.length)return;
+    var idx=pts[0].index;
+    var prioKey=order[idx][0];
+    var tasks=G.tasks.filter(function(t){return(t.priority||'none')===prioKey});
+    showDrill('dp-prio','dp-prio-title','dp-prio-list',labels[idx]+' priority tasks',tasks);
+  };
+  $('cPrio').style.cursor='pointer';
+}
+
+function renderProjBars(){
+  var sorted=[...G.projects].sort(function(a,b){return b.taskCount-a.taskCount});
+  var max=Math.max.apply(null,sorted.map(function(p){return p.taskCount}).concat([1]));
+  var total=G.tasks.length;
+  $('proj-bars').innerHTML=sorted.map(function(p,i){
+    return'<div class="bi" id="pbar-'+i+'" onclick="drillProj(\''+esc(p.name)+'\','+i+')">'+
+      '<div class="bl" title="'+esc(p.name)+'">'+esc(p.name)+'</div>'+
+      '<div class="bt"><div class="bf" style="width:'+bw(p.taskCount,max)+'%;background:'+p.color+'"></div></div>'+
+      '<div class="bc">'+p.taskCount+'</div>'+
+      '<div class="bp">'+(total?Math.round(p.taskCount/total*100):0)+'%</div>'+
+    '</div>';
+  }).join('');
+}
+
+window.drillProj=function(name,idx){
+  document.querySelectorAll('.bi').forEach(function(b){b.classList.remove('active')});
+  var el=$('pbar-'+idx);if(el)el.classList.add('active');
+  var tasks=G.tasks.filter(function(t){return t.list===name});
+  showDrill('dp-proj','dp-proj-title','dp-proj-list',name,tasks);
+};
+
+function renderProjHealth(){
+  $('proj-health').innerHTML=G.projects.sort(function(a,b){return b.taskCount-a.taskCount}).map(function(p,i){
+    var tasks=G.tasks.filter(function(t){return t.list===p.name});
+    var n=tasks.length||1,ip=0,pft=0,done=0,todo=0;
+    tasks.forEach(function(t){
+      if(t.status==='in progress')ip++;
+      else if(t.status==='pending for testing')pft++;
+      else if(['uat','release to uat','live'].indexOf(t.status)>=0)done++;
+      else todo++;
+    });
+    return'<div class="ph-row" onclick="drillHealth(\''+esc(p.name)+'\')">'+
+      '<div class="ph-dot" style="background:'+p.color+'"></div>'+
+      '<div class="ph-name">'+esc(p.name)+'</div>'+
+      '<div class="ph-stack">'+
+        '<div class="ph-seg" style="width:'+Math.round(ip/n*100)+'%;background:#8b5cf6"></div>'+
+        '<div class="ph-seg" style="width:'+Math.round(pft/n*100)+'%;background:#f59e0b"></div>'+
+        '<div class="ph-seg" style="width:'+Math.round(done/n*100)+'%;background:#10b981"></div>'+
+        '<div class="ph-seg" style="width:'+Math.round(todo/n*100)+'%;background:#1e293b"></div>'+
+      '</div>'+
+      '<div class="ph-num">'+tasks.length+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+window.drillHealth=function(name){
+  var tasks=G.tasks.filter(function(t){return t.list===name});
+  showDrill('dp-health','dp-health-title','dp-health-list',name,tasks);
+};
+
+function renderCompChart(){
+  killChart('cComp');
+  var done=(G.sCounts['live']||0)+(G.sCounts['uat']||0)+(G.sCounts['release to uat']||0);
+  var ip=G.sCounts['in progress']||0,pft=G.sCounts['pending for testing']||0,todo=G.sCounts['to do']||0;
+  var vals=[done,ip,pft,todo],lbls=['Completed','In Progress','Pending Test','To Do'];
+  var cols=['#10b981','#8b5cf6','#f59e0b','#334155'];
+  var statKeys=[['live','uat','release to uat'],['in progress'],['pending for testing'],['to do']];
+  var total=G.tasks.length;
+  CHARTS['cComp']=new Chart($('cComp').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:lbls,datasets:[{data:vals,backgroundColor:cols.map(function(c){return rgba(c,.8)}),borderColor:cols,borderWidth:1.5,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:TTIP}}
+  });
+  $('cComp').onclick=function(e){
+    var pts=CHARTS['cComp'].getElementsAtEventForMode(e,'nearest',{intersect:true},true);
+    if(!pts.length)return;
+    var idx=pts[0].index;
+    var keys=statKeys[idx];
+    var tasks=G.tasks.filter(function(t){return keys.indexOf(t.status)>=0});
+    showDrill('dp-comp','dp-comp-title','dp-comp-list',lbls[idx],tasks);
+  };
+  $('cComp').style.cursor='pointer';
+  $('comp-leg').innerHTML=vals.map(function(v,i){
+    return'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer;padding:3px 4px;border-radius:4px;transition:background .15s" onclick="drillComp('+i+')" onmouseover="this.style.background=\'var(--surface3)\'" onmouseout="this.style.background=\'\'">'+
+      '<div style="width:8px;height:8px;border-radius:2px;background:'+cols[i]+'"></div>'+
+      '<span style="font-size:11px;color:var(--text2);flex:1;font-family:var(--mono)">'+lbls[i]+'</span>'+
+      '<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">'+v+' · '+(total?Math.round(v/total*100):0)+'%</span>'+
+    '</div>';
+  }).join('');
+}
+
+window.drillComp=function(idx){
+  var lbls=['Completed','In Progress','Pending Test','To Do'];
+  var statKeys=[['live','uat','release to uat'],['in progress'],['pending for testing'],['to do']];
+  var tasks=G.tasks.filter(function(t){return statKeys[idx].indexOf(t.status)>=0});
+  showDrill('dp-comp','dp-comp-title','dp-comp-list',lbls[idx],tasks);
+};
+
+function renderWorkload(){
+  killChart('cWork');
+  var sorted=Object.entries(G.acm).sort(function(a,b){return b[1]-a[1]});
+  var labels=sorted.map(function(x){return x[0]});
+  var values=sorted.map(function(x){return x[1]});
+  var colors=labels.map(function(n){return ASGN_COLORS[n]||'#888'});
+  CHARTS['cWork']=new Chart($('cWork').getContext('2d'),{
+    type:'bar',
+    data:{labels:labels,datasets:[{data:values,backgroundColor:colors.map(function(c){return rgba(c,.75)}),borderColor:colors,borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:TTIP},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5568',font:{family:'IBM Plex Mono',size:9}}},y:{grid:{display:false},ticks:{color:'#94a3b8',font:{family:'IBM Plex Mono',size:10}}}}}
+  });
+  $('cWork').onclick=function(e){
+    var pts=CHARTS['cWork'].getElementsAtEventForMode(e,'nearest',{intersect:true},true);
+    if(!pts.length)return;
+    var name=labels[pts[0].index];
+    var tasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+    showDrill('dp-work','dp-work-title','dp-work-list',name+"'s tasks",tasks);
+  };
+  $('cWork').style.cursor='pointer';
+}
+
+function renderPie(){
+  killChart('cPie');
+  var sorted=Object.entries(G.acm).sort(function(a,b){return b[1]-a[1]});
+  var total=sorted.reduce(function(s,x){return s+x[1]},0);
+  var labels=sorted.map(function(x){return x[0]});
+  var values=sorted.map(function(x){return x[1]});
+  var colors=labels.map(function(n){return ASGN_COLORS[n]||'#888'});
+  CHARTS['cPie']=new Chart($('cPie').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:values,backgroundColor:colors.map(function(c){return rgba(c,.85)}),borderColor:colors,borderWidth:1.5,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,callbacks:{label:function(ctx){return ' '+ctx.parsed+' tasks · '+(total?Math.round(ctx.parsed/total*100):0)+'%'}}}}}
+  });
+  $('cPie').onclick=function(e){
+    var pts=CHARTS['cPie'].getElementsAtEventForMode(e,'nearest',{intersect:true},true);
+    if(!pts.length)return;
+    var name=labels[pts[0].index];
+    var tasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+    showDrill('dp-pie','dp-pie-title','dp-pie-list',name+"'s tasks",tasks);
+  };
+  $('cPie').style.cursor='pointer';
+  $('pie-leg').innerHTML=sorted.map(function(x,i){
+    var pct=total?Math.round(x[1]/total*100):0;
+    return'<div class="leg-row" onclick="drillAssignee(\''+esc(x[0])+'\')">'+
+      '<div class="leg-dot" style="background:'+colors[i]+'"></div>'+
+      '<span class="leg-name">'+esc(x[0])+'</span>'+
+      '<span class="leg-val">'+x[1]+'</span>'+
+      '<span class="leg-pct">'+pct+'%</span>'+
+    '</div>';
+  }).join('');
+}
+
+window.drillAssignee=function(name){
+  var tasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+  showDrill('dp-pie','dp-pie-title','dp-pie-list',name+"'s tasks",tasks);
+};
+
+function renderAssigneeCards(){
+  var sorted=Object.entries(G.acm).sort(function(a,b){return b[1]-a[1]});
+  $('ac-grid').innerHTML=sorted.map(function(x,i){
+    var name=x[0],total=x[1];
+    var d=G.aDetail[name]||{s:{},p:{},proj:{}};
+    var color=ASGN_COLORS[name]||'#888';
+    var ip=d.s['in progress']||0;
+    var live=(d.s['live']||0)+(d.s['uat']||0)+(d.s['release to uat']||0);
+    var urg=d.p['urgent']||0;
+    var pct=total?Math.round(live/total*100):0;
+    var topProj=Object.entries(d.proj||{}).sort(function(a,b){return b[1]-a[1]})[0];
+    return'<div class="ac" onclick="drillAssigneeCard(\''+esc(name)+'\')">'+
+      '<div class="ac-head">'+
+        '<div class="ac-av" style="background:'+rgba(color,.15)+';color:'+color+'">'+ini(name)+'</div>'+
+        '<div><div class="ac-name">'+esc(name)+'</div><div class="ac-sub">'+total+' tasks · '+pct+'% done</div></div>'+
+      '</div>'+
+      '<div class="ac-stats">'+
+        '<div class="ac-s"><div class="ac-sl">In progress</div><div class="ac-sv" style="color:#a78bfa">'+ip+'</div><div class="ac-sb"><div class="ac-sbf" style="width:'+bw(ip,total)+'%;background:#8b5cf6"></div></div></div>'+
+        '<div class="ac-s"><div class="ac-sl">Completed</div><div class="ac-sv" style="color:#34d399">'+live+'</div><div class="ac-sb"><div class="ac-sbf" style="width:'+bw(live,total)+'%;background:#10b981"></div></div></div>'+
+        '<div class="ac-s"><div class="ac-sl">Urgent</div><div class="ac-sv" style="color:#fca5a5">'+urg+'</div><div class="ac-sb"><div class="ac-sbf" style="width:'+bw(urg,total)+'%;background:#ef4444"></div></div></div>'+
+      '</div>'+
+      (topProj?'<div class="ac-proj">Top project: <span style="color:'+color+'">'+esc(topProj[0])+'</span> ('+topProj[1]+')</div>':'')+
+      '<div class="ac-hint">Click to view all tasks →</div>'+
+    '</div>';
+  }).join('');
+}
+
+window.drillAssigneeCard=function(name){
+  var tasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+  // scroll to table and filter
+  F.proj='All';F.stat='All';F.prio='All';PAGE=0;
+  if($('srch'))$('srch').value=name;
+  applyFilters();
+  var tbl=document.querySelector('.sec:last-of-type');
+  if(tbl)tbl.scrollIntoView({behavior:'smooth'});
+};
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+function buildFilters(){
+  var projNames=['All'].concat(G.projects.map(function(p){return p.name}));
+  $('f-proj').innerHTML=projNames.map(function(p){
+    return'<button class="fbtn'+(p==='All'?' on':'')+'" data-val="'+esc(p)+'" onclick="setF(this,\'proj\',\''+esc(p)+'\')">'+(p==='All'?'All':esc(p))+'</button>';
+  }).join('');
+  var stats=['All'].concat(Object.keys(G.sCounts).sort());
+  $('f-stat').innerHTML=stats.map(function(s){
+    return'<button class="fbtn'+(s==='All'?' on':'')+'" data-val="'+esc(s)+'" onclick="setF(this,\'stat\',\''+esc(s)+'\')">'+(s==='All'?'All':slbl(s))+'</button>';
+  }).join('');
+  var prios=['All','urgent','high','normal','low','none'].filter(function(p){return p==='All'||G.pCounts[p]});
+  $('f-prio').innerHTML=prios.map(function(p){
+    return'<button class="fbtn'+(p==='All'?' on':'')+'" data-val="'+p+'" onclick="setF(this,\'prio\',\''+p+'\')">'+(p==='All'?'All':p.charAt(0).toUpperCase()+p.slice(1))+'</button>';
+  }).join('');
+}
+
+window.setF=function(btn,type,val){
+  F[type]=val;PAGE=0;
+  var groupMap={proj:'f-proj',stat:'f-stat',prio:'f-prio'};
+  var c=$(groupMap[type]);
+  if(c)c.querySelectorAll('.fbtn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-val')===val)});
+  applyFilters();
+};
+
+var SORT_DIR={name:1,list:1,status:1,priority:1,due:1};
+window.doSort=function(col){
+  if(F.sort===col)SORT_DIR[col]*=-1;else SORT_DIR[col]=1;
+  F.sort=col;F.dir=SORT_DIR[col];PAGE=0;
+  ['name','list','status','priority','due'].forEach(function(c){
+    var el=$('th-'+c);if(!el)return;
+    var txt=el.textContent.replace(/[↕↑↓]/g,'').trim();
+    el.textContent=txt+' '+(c===col?(F.dir===1?'↑':'↓'):'↕');
+    el.classList.toggle('th-sorted',c===col);
+  });
+  applyFilters();
+};
+
+function getFiltered(){
+  var tasks=G.tasks.slice();
+  if(F.proj!=='All')tasks=tasks.filter(function(t){return t.list===F.proj});
+  if(F.stat!=='All')tasks=tasks.filter(function(t){return t.status===F.stat});
+  if(F.prio!=='All')tasks=tasks.filter(function(t){return(t.priority||'none')===F.prio});
+  var q=($('srch')&&$('srch').value||'').toLowerCase().trim();
+  if(q)tasks=tasks.filter(function(t){
+    return t.name.toLowerCase().indexOf(q)>=0||t.list.toLowerCase().indexOf(q)>=0||
+      t.assignees.some(function(a){return a.toLowerCase().indexOf(q)>=0});
+  });
+  tasks.sort(function(a,b){
+    var av,bv;
+    if(F.sort==='name'){av=a.name.toLowerCase();bv=b.name.toLowerCase();}
+    else if(F.sort==='list'){av=a.list.toLowerCase();bv=b.list.toLowerCase();}
+    else if(F.sort==='status'){av=a.status||'';bv=b.status||'';}
+    else if(F.sort==='priority'){var o={urgent:0,high:1,normal:2,low:3,none:4};av=o[a.priority||'none']||4;bv=o[b.priority||'none']||4;}
+    else if(F.sort==='due'){av=Number(a.due_date||9e15);bv=Number(b.due_date||9e15);}
+    else{av=a.name.toLowerCase();bv=b.name.toLowerCase();}
+    return av<bv?-F.dir:av>bv?F.dir:0;
+  });
+  return tasks;
+}
+
+function applyFilters(){
+  var filtered=getFiltered();
+  $('task-count-lbl').textContent=filtered.length+' task'+(filtered.length!==1?'s':'');
+  renderTable(filtered);
+}
+
+function renderTable(tasks){
+  var start=PAGE*PAGE_SIZE,end=start+PAGE_SIZE,page=tasks.slice(start,end);
+  var pcm={};G.projects.forEach(function(p){pcm[p.name]=p.color});
+  $('tbl-body').innerHTML=page.length?page.map(function(t){
+    var pc=pcm[t.list]||'#4a5568';
+    var over=isOver(t.due_date)&&t.status!=='live';
+    var avs=(t.assignees||[]).map(function(a){
+      return'<div class="td-av" title="'+esc(a)+'" style="background:'+rgba(ASGN_COLORS[a]||'#888',.18)+';color:'+(ASGN_COLORS[a]||'#888')+'">'+ini(a)+'</div>';
+    }).join('');
+    // task name links directly to ClickUp
+    var nameEl=t.url?
+      '<a href="'+t.url+'" target="_blank" class="td-name-link" title="'+esc(t.name)+'">'+esc(t.name)+'</a>':
+      '<span class="td-name" title="'+esc(t.name)+'">'+esc(t.name)+'</span>';
+    return'<tr>'+
+      '<td>'+nameEl+'</td>'+
+      '<td><div class="td-proj"><span class="td-dot" style="background:'+pc+'"></span>'+esc(t.list)+'</div></td>'+
+      '<td><span class="badge '+scls(t.status)+'">'+slbl(t.status)+'</span></td>'+
+      '<td>'+(t.priority?'<div style="display:flex;align-items:center;gap:5px"><span class="pdot '+pdcls(t.priority)+'"></span><span class="badge '+pcls(t.priority)+'">'+t.priority+'</span></div>':'<span style="color:var(--text3);font-size:11px;font-family:var(--mono)">—</span>')+'</td>'+
+      '<td><div class="td-avs">'+(avs||'<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">unassigned</span>')+'</div></td>'+
+      '<td><span class="td-due'+(over?' ov':'')+'">'+fmtDate(t.due_date)+(over?' ⚠':'')+'</span></td>'+
+    '</tr>';
+  }).join(''):'<tr><td colspan="6"><div class="empty">No tasks match the current filters.</div></td></tr>';
+
+  var totalPages=Math.ceil(tasks.length/PAGE_SIZE);
+  $('tbl-info').textContent='Showing '+(tasks.length?Math.min(start+1,tasks.length):0)+'–'+Math.min(end,tasks.length)+' of '+tasks.length;
+  var pb=$('pgbtns');pb.innerHTML='';
+  if(totalPages>1){
+    var prev=document.createElement('button');prev.className='pgbtn';prev.textContent='←';prev.disabled=PAGE===0;
+    prev.onclick=function(){PAGE--;renderTable(tasks)};pb.appendChild(prev);
+    for(var i=0;i<totalPages;i++){
+      (function(pi){
+        if(pi===0||pi===totalPages-1||Math.abs(pi-PAGE)<=1){
+          var b=document.createElement('button');b.className='pgbtn'+(pi===PAGE?' on':'');
+          b.textContent=pi+1;b.onclick=function(){PAGE=pi;renderTable(tasks)};pb.appendChild(b);
+        }else if(Math.abs(pi-PAGE)===2){
+          var sp=document.createElement('span');sp.textContent='…';sp.style.cssText='color:var(--text3);padding:0 4px;font-size:11px;align-self:center';pb.appendChild(sp);
+        }
+      })(i);
+    }
+    var next=document.createElement('button');next.className='pgbtn';next.textContent='→';next.disabled=PAGE>=totalPages-1;
+    next.onclick=function(){PAGE++;renderTable(tasks)};pb.appendChild(next);
+  }
+}
+
+function renderDailyStatus(){
+  var total=G.tasks.length;
+  var live=(G.sCounts['live']||0)+(G.sCounts['uat']||0);  // uat+live = completed for reporting
+  var completed=G.sCounts['live']||0;
+  var ruat=G.sCounts['release to uat']||0;
+  var uat=G.sCounts['uat']||0;
+  var pft=G.sCounts['pending for testing']||0;
+  var ip=G.sCounts['in progress']||0;
+  var todo=G.sCounts['to do']||0;
+
+  // date
+  var now=new Date();
+  $('ds-date').textContent=now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  $('ds-total').textContent=total;
+
+  var rows=[
+    {label:'Completed / Live',val:completed,color:'#10b981',key:'live'},
+    {label:'Release to UAT',val:ruat,color:'#3b82f6',key:'release to uat'},
+    {label:'UAT',val:uat,color:'#14b8a6',key:'uat'},
+    {label:'Pending for Testing',val:pft,color:'#f59e0b',key:'pending for testing'},
+    {label:'In Progress',val:ip,color:'#8b5cf6',key:'in progress'},
+    {label:'To Do',val:todo,color:'#334155',key:'to do'},
+  ];
+
+  $('ds-snapshot').innerHTML=rows.map(function(r){
+    var pct=total?Math.round(r.val/total*100):0;
+    return'<div class="ds-row" onclick="drillDailyStatus(\''+r.key+'\',\''+r.label+'\')">'+
+      '<div class="ds-dot" style="background:'+r.color+'"></div>'+
+      '<span class="ds-label">'+r.label+'</span>'+
+      '<div class="ds-bar-wrap"><div class="ds-bar" style="width:'+pct+'%;background:'+r.color+'"></div></div>'+
+      '<span class="ds-pct">'+pct+'%</span>'+
+      '<span class="ds-val">'+r.val+'</span>'+
+    '</div>';
+  }).join('');
+
+  $('ds-note').textContent='Note: For reporting purposes, "Live" is treated as completed.';
+
+  // Team workload
+  var DONE_STATUSES=['live','uat'];
+  var OPEN_STATUSES=['in progress','pending for testing','release to uat','to do'];
+  var teamData=Object.keys(G.acm).map(function(name){
+    var myTasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+    var open=myTasks.filter(function(t){return OPEN_STATUSES.indexOf(t.status)>=0}).length;
+    var done=myTasks.filter(function(t){return DONE_STATUSES.indexOf(t.status)>=0}).length;
+    return{name:name,open:open,done:done,total:myTasks.length,color:ASGN_COLORS[name]||'#888'};
+  }).sort(function(a,b){return b.open-a.open});
+
+  $('ds-team').innerHTML=teamData.map(function(m){
+    var pct=m.total?Math.round(m.done/m.total*100):0;
+    return'<div class="tw-row" onclick="drillTeamMember(\''+esc(m.name)+'\')">'+
+      '<div class="tw-av" style="background:'+rgba(m.color,.15)+';color:'+m.color+'">'+ini(m.name)+'</div>'+
+      '<div>'+
+        '<div class="tw-name">'+esc(m.name)+'</div>'+
+        '<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">'+(pct)+'% done</div>'+
+      '</div>'+
+      '<div class="tw-stats">'+
+        '<div style="text-align:right"><div class="tw-open">'+m.open+' open</div><div class="tw-done">'+m.done+' done</div></div>'+
+        '<div class="tw-progress"><div class="tw-progress-fill" style="width:'+pct+'%"></div></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+window.drillDailyStatus=function(statusKey,label){
+  var tasks=G.tasks.filter(function(t){return t.status===statusKey});
+  showDrill('dp-ds','dp-ds-title','dp-ds-list',label,tasks);
+};
+
+window.drillTeamMember=function(name){
+  var OPEN=['in progress','pending for testing','release to uat','to do'];
+  var DONE=['live','uat'];
+  var tasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+  var open=tasks.filter(function(t){return OPEN.indexOf(t.status)>=0});
+  var done=tasks.filter(function(t){return DONE.indexOf(t.status)>=0});
+  // show open first then done
+  var combined=open.concat(done);
+  showDrill('dp-tw','dp-tw-title','dp-tw-list',name+' — '+open.length+' open, '+done.length+' completed',combined);
+};
+
+window.exportStatus=function(){
+  var now=new Date();
+  var dateStr=now.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  var total=G.tasks.length;
+  var DONE_S=['live','uat'];
+  var OPEN_S=['in progress','pending for testing','release to uat','to do'];
+
+  var lines=[];
+  lines.push('DAILY STATUS REPORT — '+G.spaceName.toUpperCase());
+  lines.push(dateStr);
+  lines.push('');
+  lines.push('─────────────────────────────────');
+  lines.push('OVERALL SNAPSHOT');
+  lines.push('─────────────────────────────────');
+  lines.push('Total tasks tracked : '+total);
+  lines.push('Completed / Live    : '+(G.sCounts['live']||0));
+  lines.push('Release to UAT      : '+(G.sCounts['release to uat']||0));
+  lines.push('UAT                 : '+(G.sCounts['uat']||0));
+  lines.push('Pending for Testing : '+(G.sCounts['pending for testing']||0));
+  lines.push('In Progress         : '+(G.sCounts['in progress']||0));
+  lines.push('To Do               : '+(G.sCounts['to do']||0));
+  lines.push('');
+  lines.push('Note: For reporting purposes, "Live" is treated as completed.');
+  lines.push('');
+  lines.push('─────────────────────────────────');
+  lines.push('TEAM WORKLOAD SUMMARY');
+  lines.push('─────────────────────────────────');
+  var teamData=Object.keys(G.acm).map(function(name){
+    var myTasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+    var open=myTasks.filter(function(t){return OPEN_S.indexOf(t.status)>=0}).length;
+    var done=myTasks.filter(function(t){return DONE_S.indexOf(t.status)>=0}).length;
+    return{name:name,open:open,done:done};
+  }).sort(function(a,b){return b.open-a.open});
+  teamData.forEach(function(m){
+    var namePad=m.name.padEnd(22);
+    lines.push(namePad+' — '+m.open+' open, '+m.done+' completed');
+  });
+  lines.push('');
+  lines.push('─────────────────────────────────');
+  lines.push('TASK DETAIL');
+  lines.push('─────────────────────────────────');
+  G.tasks.forEach(function(t){
+    lines.push('['+t.status.toUpperCase()+'] '+t.name+' ('+t.list+')');
+  });
+
+  var blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='status-report-'+now.toISOString().slice(0,10)+'.txt';
+  a.click();
+};
+
+
+window.closeDrill=closeDrill;
+</script>
+</body>
+</html>
