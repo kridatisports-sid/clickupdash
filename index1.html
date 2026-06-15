@@ -203,6 +203,41 @@ tbody td{padding:10px 10px 10px 0;vertical-align:middle}
 .pgbtn:hover{border-color:var(--gold);color:var(--gold)}.pgbtn.on{background:var(--gold);border-color:var(--gold);color:#080c14;font-weight:600}.pgbtn:disabled{opacity:.3;cursor:not-allowed}
 .empty{text-align:center;padding:3rem;color:var(--text3);font-size:13px}
 
+/* DAILY STATUS */
+.ds-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:700px){.ds-wrap{grid-template-columns:1fr}}
+.ds-date{font-family:var(--mono);font-size:11px;color:var(--gold);margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.ds-date::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--gold);display:block}
+.ds-snapshot{display:flex;flex-direction:column;gap:0}
+.ds-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;border-radius:4px;padding-left:4px;padding-right:4px}
+.ds-row:last-child{border-bottom:none}
+.ds-row:hover{background:var(--surface3)}
+.ds-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.ds-label{font-size:12px;color:var(--text2);flex:1;font-family:var(--mono)}
+.ds-val{font-family:var(--font-d);font-size:18px;color:var(--text);min-width:36px;text-align:right}
+.ds-pct{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:36px;text-align:right}
+.ds-bar-wrap{width:80px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;flex-shrink:0}
+.ds-bar{height:100%;border-radius:2px}
+.ds-note{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:12px;padding:8px 10px;background:var(--surface3);border-radius:6px;border-left:2px solid var(--gold);line-height:1.5}
+.ds-total-row{display:flex;align-items:center;gap:10px;padding:10px 4px 12px;border-bottom:1px solid var(--border2);margin-bottom:4px}
+.ds-total-lbl{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;font-family:var(--mono);flex:1}
+.ds-total-val{font-family:var(--font-d);font-size:22px;color:var(--gold)}
+
+/* team workload */
+.tw-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;border-radius:4px}
+.tw-row:last-child{border-bottom:none}
+.tw-row:hover{background:var(--surface3)}
+.tw-av{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.tw-name{font-size:12px;color:var(--text);flex:1;font-weight:500}
+.tw-stats{display:flex;gap:12px;align-items:center}
+.tw-open{font-size:12px;color:var(--warning);font-family:var(--mono)}
+.tw-done{font-size:12px;color:var(--success);font-family:var(--mono)}
+.tw-progress{width:60px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.tw-progress-fill{height:100%;border-radius:2px;background:var(--success)}
+.ds-drill-panel{background:var(--surface2);border:1px solid var(--gold-dim);border-radius:var(--r-lg);padding:1.25rem;margin-top:12px;display:none;animation:slideIn .2s ease}
+.ds-export-btn{background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);color:var(--gold);font-size:11px;font-family:var(--mono);padding:5px 12px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.ds-export-btn:hover{background:var(--gold);color:#080c14}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(201,168,76,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
 </style>
@@ -221,8 +256,10 @@ tbody td{padding:10px 10px 10px 0;vertical-align:middle}
       <p class="fh">ClickUp → Settings → Apps → API Token. Saved in your browser only.</p>
     </div>
     <div class="fg">
-      <label class="fl">Space URL</label>
-      <input type="url" class="fi" id="iurl" placeholder="https://app.clickup.com/90161601633/v/s/90166936041"/>
+      <label class="fl">Space URLs</label>
+      <div id="url-rows"></div>
+      <button type="button" id="add-url-btn" onclick="addUrl()" style="margin-top:8px;width:100%;padding:9px;background:transparent;border:1px dashed rgba(255,255,255,0.15);border-radius:var(--r);color:var(--text3);font-size:12px;font-family:var(--mono);cursor:pointer;text-align:left;transition:all .2s">+ Add another space URL</button>
+      <p class="fh">Accepts space URLs (v/s/ID) or list URLs (v/li/ID). Mix and match freely.</p>
     </div>
     <button class="btn-go" id="gbtn" onclick="generate()">
       <span id="gicon">→</span><span id="gtxt">Generate Dashboard</span>
@@ -339,6 +376,39 @@ tbody td{padding:10px 10px 10px 0;vertical-align:middle}
 
     <div class="ac-grid" id="ac-grid"></div>
 
+    <!-- DAILY STATUS REPORT -->
+    <div class="sec"><div class="sec-lbl">Daily status report</div><div class="sec-line"></div>
+      <button class="ds-export-btn" onclick="exportStatus()">⬇ Export report</button>
+    </div>
+    <div class="ds-wrap">
+      <!-- Overall snapshot -->
+      <div class="card">
+        <div class="card-t" style="display:flex;align-items:center;justify-content:space-between">
+          Overall snapshot
+          <span id="ds-date" class="ds-date"></span>
+        </div>
+        <div class="ds-total-row">
+          <span class="ds-total-lbl">Total tasks tracked</span>
+          <span class="ds-total-val" id="ds-total">—</span>
+        </div>
+        <div class="ds-snapshot" id="ds-snapshot"></div>
+        <div class="ds-note" id="ds-note"></div>
+        <div class="ds-drill-panel" id="dp-ds">
+          <div class="drill-header"><span class="drill-title" id="dp-ds-title"></span><button class="drill-close" onclick="closeDrill('dp-ds')">✕</button></div>
+          <div class="drill-list" id="dp-ds-list"></div>
+        </div>
+      </div>
+      <!-- Team workload -->
+      <div class="card">
+        <div class="card-t">Team workload summary</div>
+        <div id="ds-team"></div>
+        <div class="ds-drill-panel" id="dp-tw">
+          <div class="drill-header"><span class="drill-title" id="dp-tw-title"></span><button class="drill-close" onclick="closeDrill('dp-tw')">✕</button></div>
+          <div class="drill-list" id="dp-tw-list"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="sec"><div class="sec-lbl">Task registry</div><div class="sec-line"></div><div class="sec-num" id="task-count-lbl">0 tasks</div></div>
     <div class="card">
       <div class="tbl-controls">
@@ -435,11 +505,40 @@ function showDrill(panelId, titleId, listId, title, tasks){
 function closeDrill(id){$(id).style.display='none'}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+function addUrl(val){
+  var wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;gap:6px;margin-bottom:8px';
+  var inp=document.createElement('input');
+  inp.type='url';inp.className='fi';inp.placeholder='Space: .../v/s/ID  or  List: .../v/li/ID';
+  inp.style.flex='1';if(val)inp.value=val;
+  inp.addEventListener('blur',saveUrls);
+  var btn=document.createElement('button');
+  btn.type='button';btn.textContent='✕';
+  btn.style.cssText='background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text3);font-size:13px;padding:0 12px;cursor:pointer;flex-shrink:0;transition:color .15s';
+  btn.onmouseover=function(){this.style.color='var(--danger)'};
+  btn.onmouseout=function(){this.style.color='var(--text3)'};
+  btn.onclick=function(){wrap.remove();saveUrls()};
+  wrap.appendChild(inp);wrap.appendChild(btn);
+  document.getElementById('url-rows').appendChild(wrap);
+  return inp;
+}
+function saveUrls(){
+  var vals=Array.from(document.querySelectorAll('#url-rows input')).map(function(i){return i.value.trim()}).filter(Boolean);
+  localStorage.setItem('cu_urls',JSON.stringify(vals));
+}
+function getUrls(){
+  return Array.from(document.querySelectorAll('#url-rows input')).map(function(i){return i.value.trim()}).filter(Boolean);
+}
+window.addUrl=addUrl;
+
 window.addEventListener('DOMContentLoaded',function(){
   var k=localStorage.getItem('cu_key')||'';
-  var u=localStorage.getItem('cu_url')||'';
   if(k)$('ikey').value=k;
-  if(u)$('iurl').value=u;
+  var saved=[];
+  try{saved=JSON.parse(localStorage.getItem('cu_urls')||'[]')}catch(e){}
+  if(!saved.length){var u=localStorage.getItem('cu_url')||'';if(u)saved=[u];}
+  if(!saved.length)saved=[''];
+  saved.forEach(function(u){addUrl(u)});
 });
 
 function goBack(){
@@ -447,60 +546,121 @@ function goBack(){
   $('dash').style.display='none';$('setup-page').style.display='flex';
 }
 
-function parseURL(u){var m=u.match(/app\.clickup\.com\/(\d+)\/v\/[sl]\/(\d+)/);return m?{w:m[1],s:m[2]}:null}
+function parseURL(u){
+  // Space URL: /v/s/SPACEID
+  var ms=u.match(/app\.clickup\.com\/(\d+)\/v\/s\/(\d+)/);
+  if(ms)return{type:'space',w:ms[1],id:ms[2]};
+  // List URL: /v/li/LISTID
+  var ml=u.match(/app\.clickup\.com\/(\d+)\/v\/li\/(\d+)/);
+  if(ml)return{type:'list',w:ml[1],id:ml[2]};
+  // Legacy fallback: /v/s/ or /v/l/
+  var mf=u.match(/app\.clickup\.com\/(\d+)\/v\/[sl]\/(\d+)/);
+  if(mf)return{type:'space',w:mf[1],id:mf[2]};
+  return null;
+}
 async function cuFetch(token,path){
   var res=await fetch('https://api.clickup.com/api/v2'+path,{headers:{'Authorization':token}});
   if(!res.ok){var e=await res.json().catch(function(){return{}});throw new Error(e.err||e.error||'ClickUp error '+res.status);}
   return res.json();
 }
 
+async function fetchOneSpace(token, ids, colorOffset){
+  var spaceData=await cuFetch(token,'/space/'+ids.s);
+  var sName=spaceData.name||('Space '+ids.s);
+  log('Space: '+sName,'ok');
+  var listsRes=await cuFetch(token,'/space/'+ids.s+'/list?archived=false');
+  var lists=listsRes.lists||[];
+  var foldersRes=await cuFetch(token,'/space/'+ids.s+'/folder?archived=false');
+  for(var fi=0;fi<(foldersRes.folders||[]).length;fi++){
+    var fl=await cuFetch(token,'/folder/'+foldersRes.folders[fi].id+'/list?archived=false');
+    if(fl.lists)lists=lists.concat(fl.lists);
+  }
+  log(lists.length+' lists in '+sName,'ok');
+  var tasks=[];
+  for(var li=0;li<lists.length;li++){
+    var list=lists[li];log('Fetching "'+list.name+'"…','sp');
+    var pg=0;
+    while(true){
+      var td=await cuFetch(token,'/list/'+list.id+'/task?include_closed=true&subtasks=true&page='+pg);
+      var tks=td.tasks||[];
+      for(var ti=0;ti<tks.length;ti++){
+        var t=tks[ti];
+        tasks.push({id:t.id,name:t.name,
+          status:(t.status&&t.status.status?t.status.status:'').toLowerCase(),
+          priority:prioNum(t.priority&&t.priority.priority?t.priority.priority:null),
+          list:list.name,space:sName,url:t.url,due_date:t.due_date||null,
+          assignees:(t.assignees||[]).map(function(a){return a.username||a.email||''}).filter(Boolean)
+        });
+      }
+      if(tks.length<100)break;pg++;
+    }
+  }
+  var projects=[];
+  for(var pi=0;pi<lists.length;pi++){
+    var lname=lists[pi].name;
+    var cnt=tasks.filter(function(t){return t.list===lname}).length;
+    if(cnt>0)projects.push({name:lname,space:sName,taskCount:cnt,color:PAL[(colorOffset+pi)%PAL.length]});
+  }
+  return{spaceName:sName,tasks:tasks,projects:projects};
+}
+
+async function fetchOneList(token, listId, colorOffset){
+  var listData=await cuFetch(token,'/list/'+listId);
+  var lName=listData.name||('List '+listId);
+  var sName=listData.space&&listData.space.name?listData.space.name:lName;
+  log('List: '+lName+' ('+sName+')','ok');
+  var tasks=[];
+  var pg=0;
+  while(true){
+    var td=await cuFetch(token,'/list/'+listId+'/task?include_closed=true&subtasks=true&page='+pg);
+    var tks=td.tasks||[];
+    for(var ti=0;ti<tks.length;ti++){
+      var t=tks[ti];
+      tasks.push({id:t.id,name:t.name,
+        status:(t.status&&t.status.status?t.status.status:'').toLowerCase(),
+        priority:prioNum(t.priority&&t.priority.priority?t.priority.priority:null),
+        list:lName,space:sName,url:t.url,due_date:t.due_date||null,
+        assignees:(t.assignees||[]).map(function(a){return a.username||a.email||''}).filter(Boolean)
+      });
+    }
+    if(tks.length<100)break;pg++;
+  }
+  var projects=[{name:lName,space:sName,taskCount:tasks.length,color:PAL[colorOffset%PAL.length]}];
+  return{spaceName:lName,tasks:tasks,projects:projects};
+}
+
 async function generate(){
   $('ebox').innerHTML='';$('plog').innerHTML='';
-  var token=$('ikey').value.trim(),rawUrl=$('iurl').value.trim();
+  var token=$('ikey').value.trim();
+  var urls=getUrls();
   if(!token)return showErr('Enter your ClickUp API token.');
-  if(!rawUrl)return showErr('Enter your ClickUp space URL.');
-  var ids=parseURL(rawUrl);
-  if(!ids)return showErr('URL not recognised.');
-  localStorage.setItem('cu_key',token);localStorage.setItem('cu_url',rawUrl);
+  if(!urls.length)return showErr('Add at least one ClickUp space or list URL.');
+  var parsedList=[];
+  for(var i=0;i<urls.length;i++){
+    var parsed=parseURL(urls[i]);
+    if(!parsed)return showErr('URL not recognised: '+urls[i]+'<br><small>Expected space URL (v/s/ID) or list URL (v/li/ID)</small>');
+    parsedList.push(parsed);
+  }
+  localStorage.setItem('cu_key',token);saveUrls();
   setLoading(true);
   try{
-    log('Connecting…','sp');
-    var spaceData=await cuFetch(token,'/space/'+ids.s);
-    G.spaceName=spaceData.name||'Dashboard';log('Space: '+G.spaceName,'ok');
-    var listsRes=await cuFetch(token,'/space/'+ids.s+'/list?archived=false');
-    var lists=listsRes.lists||[];
-    var foldersRes=await cuFetch(token,'/space/'+ids.s+'/folder?archived=false');
-    for(var fi=0;fi<(foldersRes.folders||[]).length;fi++){
-      var fl=await cuFetch(token,'/folder/'+foldersRes.folders[fi].id+'/list?archived=false');
-      if(fl.lists)lists=lists.concat(fl.lists);
-    }
-    log(lists.length+' lists','ok');
-    G.tasks=[];
-    for(var li=0;li<lists.length;li++){
-      var list=lists[li];log('Fetching "'+list.name+'"…','sp');
-      var pg=0;
-      while(true){
-        var td=await cuFetch(token,'/list/'+list.id+'/task?include_closed=true&subtasks=true&page='+pg);
-        var tks=td.tasks||[];
-        for(var ti=0;ti<tks.length;ti++){
-          var t=tks[ti];
-          G.tasks.push({id:t.id,name:t.name,
-            status:(t.status&&t.status.status?t.status.status:'').toLowerCase(),
-            priority:prioNum(t.priority&&t.priority.priority?t.priority.priority:null),
-            list:list.name,url:t.url,due_date:t.due_date||null,
-            assignees:(t.assignees||[]).map(function(a){return a.username||a.email||''}).filter(Boolean)
-          });
-        }
-        if(tks.length<100)break;pg++;
+    log('Connecting to '+parsedList.length+' source'+(parsedList.length>1?'s':'')+'…','sp');
+    G.tasks=[];G.projects=[];
+    var spaceNames=[];
+    for(var si=0;si<parsedList.length;si++){
+      var parsed=parsedList[si];
+      var result;
+      if(parsed.type==='list'){
+        result=await fetchOneList(token,parsed.id,si*6);
+      } else {
+        result=await fetchOneSpace(token,{s:parsed.id},si*6);
       }
+      G.tasks=G.tasks.concat(result.tasks);
+      G.projects=G.projects.concat(result.projects);
+      spaceNames.push(result.spaceName);
     }
-    log(G.tasks.length+' tasks','ok');
-    G.projects=[];
-    for(var pi=0;pi<lists.length;pi++){
-      var lname=lists[pi].name;
-      var cnt=G.tasks.filter(function(t){return t.list===lname}).length;
-      if(cnt>0)G.projects.push({name:lname,taskCount:cnt,color:PAL[pi%PAL.length]});
-    }
+    G.spaceName=spaceNames.join(' · ');
+    log(G.tasks.length+' total tasks','ok');
     G.sCounts={};G.pCounts={};G.acm={};G.aDetail={};
     for(var qi=0;qi<G.tasks.length;qi++){
       var tk=G.tasks[qi];
@@ -514,7 +674,6 @@ async function generate(){
         G.aDetail[a].proj[tk.list]=(G.aDetail[a].proj[tk.list]||0)+1;
       }
     }
-    // build assignee color map
     Object.keys(G.acm).forEach(function(n,i){ASGN_COLORS[n]=PAL[i%PAL.length]});
     log('Rendering…','sp');
     $('setup-page').style.display='none';$('dash').style.display='block';
@@ -525,12 +684,12 @@ async function generate(){
 }
 
 function renderAll(){
-  $('tb-brand').textContent=G.spaceName+' — Executive Dashboard';
+  $('tb-brand').textContent='Executive Dashboard';
   $('tb-space').textContent=G.spaceName;
   $('tb-meta').textContent='Updated '+new Date().toLocaleTimeString();
   renderKPIs();renderStatusChart();renderPrioChart();renderProjBars();
   renderProjHealth();renderCompChart();renderWorkload();renderPie();
-  renderAssigneeCards();buildFilters();applyFilters();
+  renderAssigneeCards();renderDailyStatus();buildFilters();applyFilters();
 }
 
 var TTIP={backgroundColor:'#111827',titleColor:'#e8edf5',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1};
@@ -890,7 +1049,163 @@ function renderTable(tasks){
   }
 }
 
-window.generate=generate;window.goBack=goBack;window.applyFilters=applyFilters;
+function renderDailyStatus(){
+  var total=G.tasks.length;
+  // Reporting rules:
+  // Completed = Live only
+  // In Progress = In Progress + Pending for Testing + Release to UAT
+  // UAT = separate
+  // To Do = To Do
+  var completed=G.sCounts['live']||0;
+  var uat=G.sCounts['uat']||0;
+  var ip=(G.sCounts['in progress']||0)+(G.sCounts['pending for testing']||0)+(G.sCounts['release to uat']||0);
+  var todo=G.sCounts['to do']||0;
+  var onhold=G.sCounts['on hold']||0;
+
+  // date
+  var now=new Date();
+  $('ds-date').textContent=now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  $('ds-total').textContent=total;
+
+  var rows=[
+    {label:'Completed / Live',val:completed,color:'#10b981',key:'live'},
+    {label:'In Progress',val:ip,color:'#8b5cf6',key:'__inprog_combined__'},
+    {label:'UAT',val:uat,color:'#14b8a6',key:'uat'},
+    {label:'To Do',val:todo,color:'#334155',key:'to do'},
+    {label:'On Hold',val:onhold,color:'#dc2626',key:'on hold'},
+  ];
+
+  $('ds-snapshot').innerHTML=rows.map(function(r){
+    var pct=total?Math.round(r.val/total*100):0;
+    return'<div class="ds-row" onclick="drillDailyStatus(\''+r.key+'\',\''+r.label+'\')">'+
+      '<div class="ds-dot" style="background:'+r.color+'"></div>'+
+      '<span class="ds-label">'+r.label+'</span>'+
+      '<div class="ds-bar-wrap"><div class="ds-bar" style="width:'+pct+'%;background:'+r.color+'"></div></div>'+
+      '<span class="ds-pct">'+pct+'%</span>'+
+      '<span class="ds-val">'+r.val+'</span>'+
+    '</div>';
+  }).join('');
+
+  $('ds-note').textContent='Note: Completed = Live only. In Progress includes Pending Test & Release to UAT. UAT and On Hold tracked separately.';
+
+  // Team workload
+  // Completed = live only; In Progress = in progress + pft + ruat; UAT separate; open = everything not live
+  var teamData=Object.keys(G.acm).map(function(name){
+    var myTasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+    var done=myTasks.filter(function(t){return t.status==='live'}).length;
+    var inprog=myTasks.filter(function(t){return['in progress','pending for testing','release to uat'].indexOf(t.status)>=0}).length;
+    var uat_count=myTasks.filter(function(t){return t.status==='uat'}).length;
+    var onhold_count=myTasks.filter(function(t){return t.status==='on hold'}).length;
+    var open=myTasks.filter(function(t){return t.status!=='live'}).length;
+    return{name:name,open:open,done:done,inprog:inprog,uat:uat_count,onhold:onhold_count,total:myTasks.length,color:ASGN_COLORS[name]||'#888'};
+  }).sort(function(a,b){return b.open-a.open});
+
+  $('ds-team').innerHTML=teamData.map(function(m){
+    var pct=m.total?Math.round(m.done/m.total*100):0;
+    return'<div class="tw-row" onclick="drillTeamMember(\''+esc(m.name)+'\')">'+
+      '<div class="tw-av" style="background:'+rgba(m.color,.15)+';color:'+m.color+'">'+ini(m.name)+'</div>'+
+      '<div>'+
+        '<div class="tw-name">'+esc(m.name)+'</div>'+
+        '<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">'+(pct)+'% done</div>'+
+      '</div>'+
+      '<div class="tw-stats">'+
+        '<div style="text-align:right;min-width:120px">'+
+          '<div style="font-size:11px;color:#a78bfa;font-family:var(--mono)">'+m.inprog+' in progress</div>'+
+          '<div style="font-size:11px;color:#14b8a6;font-family:var(--mono)">'+m.uat+' UAT</div>'+
+          (m.onhold?'<div style="font-size:11px;color:#dc2626;font-family:var(--mono)">'+m.onhold+' on hold</div>':'')+
+          '<div class="tw-done">'+m.done+' completed</div>'+
+        '</div>'+
+        '<div class="tw-progress"><div class="tw-progress-fill" style="width:'+pct+'%"></div></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+window.drillDailyStatus=function(statusKey,label){
+  var tasks;
+  if(statusKey==='__inprog_combined__'){
+    tasks=G.tasks.filter(function(t){return['in progress','pending for testing','release to uat'].indexOf(t.status)>=0});
+  } else {
+    tasks=G.tasks.filter(function(t){return t.status===statusKey});
+  }
+  showDrill('dp-ds','dp-ds-title','dp-ds-list',label+' ('+tasks.length+')',tasks);
+};
+
+window.drillTeamMember=function(name){
+  var tasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+  var inprog=tasks.filter(function(t){return['in progress','pending for testing','release to uat'].indexOf(t.status)>=0});
+  var uat=tasks.filter(function(t){return t.status==='uat'});
+  var onhold=tasks.filter(function(t){return t.status==='on hold'});
+  var done=tasks.filter(function(t){return t.status==='live'});
+  var todo=tasks.filter(function(t){return t.status==='to do'});
+  var combined=inprog.concat(uat).concat(onhold).concat(todo).concat(done);
+  var summary=name+' — '+inprog.length+' in progress, '+uat.length+' UAT'+(onhold.length?' ('+onhold.length+' on hold)':'')+', '+done.length+' completed';
+  showDrill('dp-tw','dp-tw-title','dp-tw-list',summary,combined);
+};
+
+window.exportStatus=function(){
+  var now=new Date();
+  var dateStr=now.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  var total=G.tasks.length;
+  var DONE_S=['live','uat'];
+  var OPEN_S=['in progress','pending for testing','release to uat','to do'];
+
+  var lines=[];
+  lines.push('DAILY STATUS REPORT — '+G.spaceName.toUpperCase());
+  lines.push(dateStr);
+  lines.push('');
+  lines.push('─────────────────────────────────');
+  lines.push('OVERALL SNAPSHOT');
+  lines.push('─────────────────────────────────');
+  lines.push('Total tasks tracked : '+total);
+  var exp_completed=G.sCounts['live']||0;
+  var exp_ip=(G.sCounts['in progress']||0)+(G.sCounts['pending for testing']||0)+(G.sCounts['release to uat']||0);
+  var exp_uat=G.sCounts['uat']||0;
+  var exp_todo=G.sCounts['to do']||0;
+  var exp_onhold=G.sCounts['on hold']||0;
+  lines.push('Completed / Live    : '+exp_completed);
+  lines.push('In Progress         : '+exp_ip+' (incl. Pending Test & Release to UAT)');
+  lines.push('UAT                 : '+exp_uat);
+  lines.push('To Do               : '+exp_todo);
+  if(exp_onhold)lines.push('On Hold             : '+exp_onhold);
+  lines.push('');
+  lines.push('Note: Completed = Live only. In Progress incl. Pending Test & Release to UAT. UAT & On Hold tracked separately.');
+  lines.push('');
+  lines.push('─────────────────────────────────');
+  lines.push('TEAM WORKLOAD SUMMARY');
+  lines.push('─────────────────────────────────');
+  var teamData=Object.keys(G.acm).map(function(name){
+    var myTasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
+    var open=myTasks.filter(function(t){return OPEN_S.indexOf(t.status)>=0}).length;
+    var done=myTasks.filter(function(t){return DONE_S.indexOf(t.status)>=0}).length;
+    var inprog=myTasks.filter(function(t){return t.status==='in progress'}).length;
+    return{name:name,open:open,done:done,inprog:inprog};
+  }).sort(function(a,b){return b.open-a.open});
+  teamData.forEach(function(m){
+    var namePad=m.name.padEnd(22);
+    var exp_m_inprog=myTasks.filter(function(t){return['in progress','pending for testing','release to uat'].indexOf(t.status)>=0}).length;
+    var exp_m_uat=myTasks.filter(function(t){return t.status==='uat'}).length;
+    var exp_m_onhold=myTasks.filter(function(t){return t.status==='on hold'}).length;
+    var exp_m_done=myTasks.filter(function(t){return t.status==='live'}).length;
+    var exp_line=namePad+' — '+exp_m_inprog+' in progress, '+exp_m_uat+' UAT'+(exp_m_onhold?' ('+exp_m_onhold+' on hold)':'')+', '+exp_m_done+' completed';
+    lines.push(exp_line);
+  });
+  lines.push('');
+  lines.push('─────────────────────────────────');
+  lines.push('TASK DETAIL');
+  lines.push('─────────────────────────────────');
+  G.tasks.forEach(function(t){
+    lines.push('['+t.status.toUpperCase()+'] '+t.name+' ('+t.list+')');
+  });
+
+  var blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='status-report-'+now.toISOString().slice(0,10)+'.txt';
+  a.click();
+};
+
+
 window.closeDrill=closeDrill;
 </script>
 </body>

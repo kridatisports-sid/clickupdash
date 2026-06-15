@@ -1174,20 +1174,16 @@ window.exportStatus=function(){
   lines.push('─────────────────────────────────');
   lines.push('TEAM WORKLOAD SUMMARY');
   lines.push('─────────────────────────────────');
-  var teamData=Object.keys(G.acm).map(function(name){
+  Object.keys(G.acm).map(function(name){
     var myTasks=G.tasks.filter(function(t){return t.assignees.indexOf(name)>=0});
-    var open=myTasks.filter(function(t){return OPEN_S.indexOf(t.status)>=0}).length;
-    var done=myTasks.filter(function(t){return DONE_S.indexOf(t.status)>=0}).length;
-    var inprog=myTasks.filter(function(t){return t.status==='in progress'}).length;
-    return{name:name,open:open,done:done,inprog:inprog};
-  }).sort(function(a,b){return b.open-a.open});
-  teamData.forEach(function(m){
-    var namePad=m.name.padEnd(22);
     var exp_m_inprog=myTasks.filter(function(t){return['in progress','pending for testing','release to uat'].indexOf(t.status)>=0}).length;
     var exp_m_uat=myTasks.filter(function(t){return t.status==='uat'}).length;
     var exp_m_onhold=myTasks.filter(function(t){return t.status==='on hold'}).length;
     var exp_m_done=myTasks.filter(function(t){return t.status==='live'}).length;
-    var exp_line=namePad+' — '+exp_m_inprog+' in progress, '+exp_m_uat+' UAT'+(exp_m_onhold?' ('+exp_m_onhold+' on hold)':'')+', '+exp_m_done+' completed';
+    return{name:name,inprog:exp_m_inprog,uat:exp_m_uat,onhold:exp_m_onhold,done:exp_m_done};
+  }).sort(function(a,b){return b.inprog-a.inprog}).forEach(function(m){
+    var namePad=m.name.padEnd(22);
+    var exp_line=namePad+' — '+m.inprog+' in progress, '+m.uat+' UAT'+(m.onhold?' ('+m.onhold+' on hold)':'')+', '+m.done+' completed';
     lines.push(exp_line);
   });
   lines.push('');
