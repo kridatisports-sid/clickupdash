@@ -1190,23 +1190,8 @@ window.exportStatus=function(){
   lines.push('─────────────────────────────────');
   lines.push('TASK DETAIL');
   lines.push('─────────────────────────────────');
-  var STATUS_ORDER={'in progress':0,'pending for testing':1,'release to uat':2,'uat':3,'to do':4,'on hold':5,'live':6};
-  var sortedTasks=G.tasks.slice().sort(function(a,b){
-    var ao=STATUS_ORDER[a.status]!=null?STATUS_ORDER[a.status]:7;
-    var bo=STATUS_ORDER[b.status]!=null?STATUS_ORDER[b.status]:7;
-    if(ao!==bo)return ao-bo;
-    return a.list.localeCompare(b.list);
-  });
-  var lastStatus='';
-  sortedTasks.forEach(function(t){
-    if(t.status!==lastStatus){
-      if(lastStatus)lines.push('');
-      lines.push('  '+t.status.toUpperCase()+' ('+sortedTasks.filter(function(x){return x.status===t.status}).length+')');
-      lines.push('  '+'-'.repeat(30));
-      lastStatus=t.status;
-    }
-    var assignees=t.assignees&&t.assignees.length?'  ['+t.assignees.join(', ')+']':'';
-    lines.push('  • '+t.name+' ('+t.list+')'+assignees);
+  G.tasks.forEach(function(t){
+    lines.push('['+t.status.toUpperCase()+'] '+t.name+' ('+t.list+')');
   });
 
   var blob=new Blob([lines.join('\n')],{type:'text/plain'});
