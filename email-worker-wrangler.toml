@@ -1,0 +1,16 @@
+name = "clickup-email-reporter"
+main = "email-worker.js"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# KV namespace for storing the automation on/off toggle.
+# Create it first: npx wrangler kv:namespace create AUTOMATION_KV
+# Then paste the returned id below, OR bind it via dashboard:
+# Settings → Bindings → KV Namespace → Variable name: AUTOMATION_KV
+[[kv_namespaces]]
+binding = "AUTOMATION_KV"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+
+[triggers]
+crons = ["30 3 * * *"]
+# 3:30 AM UTC = 9:00 AM IST every day
