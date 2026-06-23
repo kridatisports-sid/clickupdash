@@ -337,15 +337,34 @@ async function sendViaZohoSMTP(env, { to, cc, subject, text, html }) {
   const enc = new TextEncoder();
   const dec = new TextDecoder();
 
-  async function readLine() {
-    let buf = '';
+  // Buffers raw bytes across reads so multi-line SMTP replies are handled correctly
+  let pending = '';
+
+  async function readReplyBlock() {
+    // Keep reading until we have at least one complete line, then keep
+    // consuming lines until we hit one where char[3] is a space (final line)
+    // rather than '-' (continuation line). Returns the FULL block of lines.
+    let lines = [];
     while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value);
-      if (buf.includes('\r\n')) break;
+      // pull more data if we don't have a full line buffered
+      while (!pending.includes('\r\n')) {
+        const { value, done } = await reader.read();
+        if (done) {
+          if (pending) { lines.push(pending); pending = ''; }
+          return lines.join('\n');
+        }
+        pending += dec.decode(value, { stream: true });
+      }
+      const idx = pending.indexOf('\r\n');
+      const line = pending.slice(0, idx);
+      pending = pending.slice(idx + 2);
+      lines.push(line);
+      // Final line of a reply has a SPACE at position 3 (e.g. "250 OK"),
+      // continuation lines have a HYPHEN (e.g. "250-PIPELINING")
+      if (line.length >= 4 && line[3] === ' ') break;
+      if (line.length < 4) break; // malformed / short line — stop to avoid infinite loop
     }
-    return buf;
+    return lines.join('\n');
   }
 
   async function send(cmd) {
@@ -353,22 +372,20 @@ async function sendViaZohoSMTP(env, { to, cc, subject, text, html }) {
   }
 
   async function expect(prefixes) {
-    const line = await readLine();
-    const code = line.slice(0, 3);
+    const block = await readReplyBlock();
+    const firstLine = block.split('\n')[0] || '';
+    const code = firstLine.slice(0, 3);
     const arr = Array.isArray(prefixes) ? prefixes : [prefixes];
     if (!arr.includes(code)) {
-      throw new Error('SMTP error: ' + line.trim());
+      throw new Error('SMTP error: ' + block.trim());
     }
-    return line;
+    return block;
   }
 
   await expect('220'); // server greeting
 
   await send('EHLO tecsolex-dashboard');
-  await expect('250');
-  // drain remaining EHLO lines
-  // (Cloudflare TCP sockets stream — read until we see the line without '-')
-  // simplified: just proceed, Zoho usually sends multi-line 250
+  await expect('250'); // now correctly consumes ALL continuation lines
 
   await send('AUTH LOGIN');
   await expect('334');
