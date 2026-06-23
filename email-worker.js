@@ -1,29 +1,37 @@
 /**
- * Cloudflare Worker — Daily ClickUp Status Email via Zoho SMTP
+ * Cloudflare Worker — Daily ClickUp Status Email via Resend
  *
  * ── SETUP ──────────────────────────────────────────────────────────────
  * 1. Deploy this as a Worker (Workers & Pages → Create → Hello World → paste this code)
  *
- * 2. Add SECRETS (Settings → Variables and Secrets → Encrypt):
+ * 2. Get a free Resend account: https://resend.com
+ *    - Sign up (free tier: 100 emails/day, no credit card)
+ *    - Verify a sending domain, OR use their test address onboarding@resend.dev
+ *      for initial testing (only works sending TO your own verified email
+ *      until you verify a domain — for full team delivery, verify your domain)
+ *    - Get your API key: Resend dashboard → API Keys → Create
+ *
+ * 3. Add SECRETS (Settings → Variables and Secrets → Encrypt):
  *    CLICKUP_TOKEN     : your ClickUp API token (pk_...)
- *    ZOHO_EMAIL        : the sending mailbox, e.g. shekhar@tecsolex.com
- *    ZOHO_APP_PASSWORD : Zoho Mail App Password (NOT your login password —
- *                        generate at Zoho Mail → My Account → Security → App Passwords)
+ *    RESEND_API_KEY    : your Resend API key (re_...)
  *    DASH_SECRET       : any random string you choose — used to authorize
  *                        the dashboard's "Send Email" button and the
- *                        automation on/off toggle. Example: a long random string.
+ *                        automation on/off toggle.
  *
- * 3. Add VARIABLES (plain, not secret):
+ * 4. Add VARIABLES (plain, not secret):
  *    SPACE_IDS   : comma-separated ClickUp space/list IDs.
  *                  Space: "90166936041"   List: prefix with l: → "l:901615134011"
  *                  Mix freely: "90166936041,l:901615134011"
  *    EMAIL_TO    : shekhar@tecsolex.com
  *    EMAIL_CC    : bhumika@tecsolex.in,dheeraj@tecsolex.in,ejaj@tecsolex.in,farheen@tecsolex.in,jay@tecsolex.com,kamleshram@tecsolex.in,pawan@tecsolex.com,roy@tecsolex.com,shubham@tecsolex.in
+ *    EMAIL_FROM  : the verified sender, e.g. "reports@tecsolex.com" (must match
+ *                  your verified domain in Resend) — or "onboarding@resend.dev"
+ *                  for quick testing
  *
- * 4. Cron trigger (Settings → Triggers → Cron Triggers):
+ * 5. Cron trigger (Settings → Triggers → Cron Triggers):
  *    Add: "30 3 * * *"   → 3:30 AM UTC = 9:00 AM IST every day
  *
- * 5. Bind a KV namespace named AUTOMATION_KV (Settings → Bindings → KV Namespace)
+ * 6. Bind a KV namespace named AUTOMATION_KV (Settings → Bindings → KV Namespace)
  *    — this stores the on/off toggle state so it persists across requests.
  *
  * ── ENDPOINTS ──────────────────────────────────────────────────────────
@@ -321,118 +329,32 @@ function buildReport(spaceNames, tasks) {
   return { text: lines.join('\n'), html, subject: `[${dateStr}] Daily Status — ${spaceNames.join(' & ')}` };
 }
 
-// ── SMTP via raw TCP socket (Cloudflare Workers TCP Sockets API) ────────────
-async function sendViaZohoSMTP(env, { to, cc, subject, text, html }) {
-  const { connect } = await import('cloudflare:sockets');
+// ── Send via Resend (https://resend.com) — simple HTTP API, no SMTP needed ──
+async function sendViaResend(env, { to, cc, subject, text, html }) {
+  const apiKey = env.RESEND_API_KEY;
+  const from = env.EMAIL_FROM || 'onboarding@resend.dev';
 
-  const host = 'smtp.zoho.com';
-  const port = 465; // implicit TLS
-  const user = env.ZOHO_EMAIL;
-  const pass = env.ZOHO_APP_PASSWORD;
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      cc: cc.length ? cc : undefined,
+      subject,
+      text,
+      html,
+    }),
+  });
 
-  const socket = connect({ hostname: host, port }, { secureTransport: 'on' });
-  const writer = socket.writable.getWriter();
-  const reader = socket.readable.getReader();
-
-  const enc = new TextEncoder();
-  const dec = new TextDecoder();
-
-  // Buffers raw bytes across reads so multi-line SMTP replies are handled correctly
-  let pending = '';
-
-  async function readReplyBlock() {
-    // Keep reading until we have at least one complete line, then keep
-    // consuming lines until we hit one where char[3] is a space (final line)
-    // rather than '-' (continuation line). Returns the FULL block of lines.
-    let lines = [];
-    while (true) {
-      // pull more data if we don't have a full line buffered
-      while (!pending.includes('\r\n')) {
-        const { value, done } = await reader.read();
-        if (done) {
-          if (pending) { lines.push(pending); pending = ''; }
-          return lines.join('\n');
-        }
-        pending += dec.decode(value, { stream: true });
-      }
-      const idx = pending.indexOf('\r\n');
-      const line = pending.slice(0, idx);
-      pending = pending.slice(idx + 2);
-      lines.push(line);
-      // Final line of a reply has a SPACE at position 3 (e.g. "250 OK"),
-      // continuation lines have a HYPHEN (e.g. "250-PIPELINING")
-      if (line.length >= 4 && line[3] === ' ') break;
-      if (line.length < 4) break; // malformed / short line — stop to avoid infinite loop
-    }
-    return lines.join('\n');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error('Resend error: ' + (err.message || JSON.stringify(err)));
   }
 
-  async function send(cmd) {
-    await writer.write(enc.encode(cmd + '\r\n'));
-  }
-
-  async function expect(prefixes) {
-    const block = await readReplyBlock();
-    const firstLine = block.split('\n')[0] || '';
-    const code = firstLine.slice(0, 3);
-    const arr = Array.isArray(prefixes) ? prefixes : [prefixes];
-    if (!arr.includes(code)) {
-      throw new Error('SMTP error: ' + block.trim());
-    }
-    return block;
-  }
-
-  await expect('220'); // server greeting
-
-  await send('EHLO tecsolex-dashboard');
-  await expect('250'); // now correctly consumes ALL continuation lines
-
-  await send('AUTH LOGIN');
-  await expect('334');
-  await send(btoa(user));
-  await expect('334');
-  await send(btoa(pass));
-  await expect('235');
-
-  await send('MAIL FROM:<' + user + '>');
-  await expect('250');
-
-  await send('RCPT TO:<' + to + '>');
-  await expect(['250', '251']);
-
-  for (const addr of cc) {
-    await send('RCPT TO:<' + addr + '>');
-    await expect(['250', '251']);
-  }
-
-  await send('DATA');
-  await expect('354');
-
-  const boundary = '----tecsolex-' + Date.now();
-  const allRecipients = [to, ...cc];
-  const msg =
-    'From: ' + user + '\r\n' +
-    'To: ' + to + '\r\n' +
-    'Cc: ' + cc.join(', ') + '\r\n' +
-    'Subject: ' + subject + '\r\n' +
-    'MIME-Version: 1.0\r\n' +
-    'Content-Type: multipart/alternative; boundary="' + boundary + '"\r\n' +
-    '\r\n' +
-    '--' + boundary + '\r\n' +
-    'Content-Type: text/plain; charset=UTF-8\r\n\r\n' +
-    text + '\r\n' +
-    '--' + boundary + '\r\n' +
-    'Content-Type: text/html; charset=UTF-8\r\n\r\n' +
-    html + '\r\n' +
-    '--' + boundary + '--\r\n' +
-    '.\r\n';
-
-  await writer.write(enc.encode(msg));
-  await expect('250');
-
-  await send('QUIT');
-
-  await writer.close();
   return true;
 }
 
@@ -444,8 +366,7 @@ async function buildAndSend(env) {
   const emailCc = (env.EMAIL_CC || '').split(',').map(s => s.trim()).filter(Boolean);
 
   if (!token) throw new Error('CLICKUP_TOKEN not set');
-  if (!env.ZOHO_EMAIL) throw new Error('ZOHO_EMAIL not set');
-  if (!env.ZOHO_APP_PASSWORD) throw new Error('ZOHO_APP_PASSWORD not set');
+  if (!env.RESEND_API_KEY) throw new Error('RESEND_API_KEY not set');
   if (!spaceIds.length) throw new Error('SPACE_IDS not set');
   if (!emailTo) throw new Error('EMAIL_TO not set');
 
@@ -464,7 +385,7 @@ async function buildAndSend(env) {
 
   const report = buildReport(spaceNames, allTasks);
 
-  await sendViaZohoSMTP(env, {
+  await sendViaResend(env, {
     to: emailTo,
     cc: emailCc,
     subject: report.subject,
