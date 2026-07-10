@@ -322,6 +322,12 @@ tbody td{padding:10px 10px 10px 0;vertical-align:middle}
             <option value="All">All Priorities</option>
           </select>
         </div>
+        <div class="td-filter-group">
+          <div class="td-filter-label">Assignee</div>
+          <select class="td-select" id="td-asgn-select">
+            <option value="All">All Assignees</option>
+          </select>
+        </div>
         <button class="btn-dl" onclick="downloadTaskDetails()">⬇ Download as Notepad</button>
       </div>
       <div class="td-count" id="td-count"></div>
@@ -1351,17 +1357,24 @@ function populateTaskDetailFilters() {
     var lbl = p === 'All' ? 'All Priorities' : p.charAt(0).toUpperCase() + p.slice(1);
     return '<option value="' + p + '">' + lbl + '</option>';
   }).join('');
-  projSel.onchange = statSel.onchange = prioSel.onchange = renderTaskDetails;
+  var asgnSel = $('td-asgn-select');
+  var asgns = ['All'].concat(Object.keys(G.acm).sort());
+  asgnSel.innerHTML = asgns.map(function(a) {
+    return '<option value="' + esc(a) + '">' + (a === 'All' ? 'All Assignees' : esc(a)) + '</option>';
+  }).join('');
+  projSel.onchange = statSel.onchange = prioSel.onchange = asgnSel.onchange = renderTaskDetails;
 }
 
 function getTaskDetailFiltered() {
   var proj = $('td-proj-select') ? $('td-proj-select').value : 'All';
   var stat = $('td-stat-select') ? $('td-stat-select').value : 'All';
   var prio = $('td-prio-select') ? $('td-prio-select').value : 'All';
+  var asgn = $('td-asgn-select') ? $('td-asgn-select').value : 'All';
   var tasks = G.tasks.slice();
   if (proj !== 'All') tasks = tasks.filter(function(t) { return t.list === proj; });
   if (stat !== 'All') tasks = tasks.filter(function(t) { return t.status === stat; });
   if (prio !== 'All') tasks = tasks.filter(function(t) { return (t.priority || 'none') === prio; });
+  if (asgn !== 'All') tasks = tasks.filter(function(t) { return t.assignees.indexOf(asgn) >= 0; });
   var SO = {'in progress':0,'pending for testing':1,'release to uat':2,'uat':3,'to do':4,'on hold':5,'live':6};
   tasks.sort(function(a, b) {
     var ao = SO[a.status] != null ? SO[a.status] : 7;
@@ -1404,13 +1417,14 @@ window.downloadTaskDetails = function() {
   var proj = $('td-proj-select') ? $('td-proj-select').value : 'All';
   var stat = $('td-stat-select') ? $('td-stat-select').value : 'All';
   var prio = $('td-prio-select') ? $('td-prio-select').value : 'All';
+  var asgn = $('td-asgn-select') ? $('td-asgn-select').value : 'All';
   var now = new Date();
   var dateStr = now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   var lines = [];
   lines.push('TASK DETAILS REPORT');
   lines.push(dateStr);
   lines.push('Space: ' + G.spaceName);
-  lines.push('Filters: Project=' + proj + ' | Status=' + (stat === 'All' ? 'All' : slbl(stat)) + ' | Priority=' + prio);
+  lines.push('Filters: Project=' + proj + ' | Status=' + (stat === 'All' ? 'All' : slbl(stat)) + ' | Priority=' + prio + ' | Assignee=' + asgn);
   lines.push('Total: ' + tasks.length + ' tasks');
   lines.push('');
   lines.push('='.repeat(60));
@@ -1438,6 +1452,7 @@ window.downloadTaskDetails = function() {
   var fname = 'tasks';
   if (proj !== 'All') fname += '-' + proj.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   if (stat !== 'All') fname += '-' + stat.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  if (asgn !== 'All') fname += '-' + asgn.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   fname += '-' + now.toISOString().slice(0,10) + '.txt';
   var blob = new Blob([lines.join('\n')], {type:'text/plain'});
   var a = document.createElement('a');
